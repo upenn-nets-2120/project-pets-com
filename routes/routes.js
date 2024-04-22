@@ -306,7 +306,7 @@ var getFeed = async function(req, res) {
 
     const userID = req.session.user_id;
 
-    // Step 2: Get feeed. 
+    // Step 2: Get feed. 
 
     const getFeedQuery = `SELECT DISTINCT friendN.primaryName AS username, 
     feed.parent_post AS parent_post,
