@@ -61,7 +61,6 @@ var postRegister = async function(req, res) {
     if (!req.body.username || !req.body.password || !req.body.email || !req.body.affiliation || !req.body.birthday || !req.body.firstName || !req.body.lastName) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
-    console.log("2")
 
     const usernameToCreate = req.body.username;
     const password = req.body.password;
@@ -73,16 +72,18 @@ var postRegister = async function(req, res) {
 
     // Step 2: Make sure forbidden characters are not used (to prevent SQL injection attacks).
 
-    if (!helper.isOK(usernameToCreate) || !helper.isOK(password) || !helper.isOK(firstName) || !helper.isOK(lastName) || !helper.isOK(email) || !helper.isOK(affiliation) || !helper.isOK(birthday)) {
+    // Question -- It seems to me that emails must include @, and birthdays might include / Change function or not check?
+
+    if (!helper.isOK(usernameToCreate) || !helper.isOK(password) || !helper.isOK(firstName) || !helper.isOK(lastName) || !helper.isOK(affiliation)) {
         return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
     }
 
     // Step 3: Make sure account doesn't already exist
 
     const checkUsernameQuery = `SELECT * FROM users WHERE username = '${usernameToCreate}'`;
+
     try {
         const results = await db.send_sql(checkUsernameQuery);
-
         
         if (results.length > 0) {
             return res.status(409).json({error: "An account with this username already exists, please try again."});
@@ -90,20 +91,16 @@ var postRegister = async function(req, res) {
             console.log("All good! You can proceed.")
         }
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({error: 'Error querying database.'});
+        return res.status(500).json({error: 'Error querying database.', error});
     }
 
     // Step 4: Hash and salt the password! 
-    console.log("HERE")
-
 
     helper.encryptPassword(password, async function(err, hashPassword) {
         if (err) {
-            return res.status(500).json({error: 'Error querying database.'});
+            return res.status(500).json({error: 'Error querying database.', err});
         }
         const hashedPassword = hashPassword;
-
 
         // Step 5: Add to table
 
@@ -112,19 +109,11 @@ var postRegister = async function(req, res) {
         VALUES ('${usernameToCreate}', '${hashedPassword}', '${email}', '${affiliation}', '${birthday}', '${firstName}', '${lastName}', NULL, NULL);
         `;
 
-        console.log("HERE! abvoe resp")
-
-
         try {
-            console.log("in try")
-            const resp = await db.insert_items(insertQuery);
-            console.log("resp  " + resp);
-            req.session.username = usernameToCreate; 
-            console.log("above return")
+            await db.insert_items(insertQuery);
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
-            console.log(error)
-            return res.status(500).json({error: 'Error querying database.'});
+            return res.status(500).json({error: 'Error querying database.', error});
         }
     });
 };
