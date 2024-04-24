@@ -69,7 +69,7 @@ async function create_tables(db) {
     commenter_id int, \
     comment VARCHAR (225), \
     FOREIGN KEY (post_id) REFERENCES posts(post_id), \
-    FOREIGN KEY (commenter_id) REFERENCES users(user_id), \
+    FOREIGN KEY (commenter_id) REFERENCES users(user_id) \
     );')
 
   //TODO: Create hashtags table
@@ -107,48 +107,15 @@ async function create_tables(db) {
     timestamp int, \
     message VARCHAR(225), \
     FOREIGN KEY (chat_id) REFERENCES chats(chat_id), \
-    FOREIGN KEY (author_id) REFERENCES users(user_id),\
+    FOREIGN KEY (author_id) REFERENCES users(user_id)\
     );')
 
   return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9]);
-  /**
-   * IGNORE AFTER THIS POINT
-   
-  var qb = db.create_tables('CREATE TABLE IF NOT EXISTS titles ( \
-    tconst VARCHAR(10) PRIMARY KEY, \
-    titleType varchar(255), \
-    primaryTitle VARCHAR(255), \
-    originalTitle VARCHAR(255), \
-    startYear varchar(4), \
-    endYear varchar(4), \
-    genres VARCHAR(255) \
-    );')
-
-  var qc = db.create_tables('CREATE TABLE IF NOT EXISTS principals ( \
-    tconst VARCHAR(10), \
-    ordering int, \
-    nconst VARCHAR(10), \
-    category VARCHAR(255), \
-    job VARCHAR(255), \
-    characters VARCHAR(255), \
-    FOREIGN KEY (tconst) REFERENCES titles(tconst), \
-    FOREIGN KEY (nconst) REFERENCES names(nconst_short) \
-    );')
-
-  var qd = db.create_tables('CREATE TABLE IF NOT EXISTS recommendations ( \
-    person VARCHAR(10), \
-    recommendation VARCHAR(10), \
-    strength int, \
-    FOREIGN KEY (person) REFERENCES names(nconst_short), \
-    FOREIGN KEY (recommendation) REFERENCES names(nconst_short) \
-    );')
-    */
 }
 
 // Database connection setup
 const db = dbaccess.get_db_connection();
-
-var result = create_tables(dbaccess).then(() => {console.log('Tables created'); dbaccess.close_db();});
+var result = create_tables(dbaccess).then(() => {console.log('Tables created'); dbaccess.close_db();}).catch((err) => console.log(err));
 
 const PORT = config.serverPort;
 
