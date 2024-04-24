@@ -55,16 +55,22 @@ var postRegister = async function(req, res) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
 
-    if (!req.body.username || !req.body.password) {
+    if (!req.body.username || !req.body.password || !req.body.email || !req.body.affiliation || !req.body.birthday || !req.body.firstName || !req.body.lastName) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
+    console.log("2")
 
     const usernameToCreate = req.body.username;
     const password = req.body.password;
+    const email = req.body.email;
+    const affiliation = req.body.affiliation;
+    const birthday = req.body.birthday;
+    const firstName = req.body.firstName;
+    const lastName = req.body.lastName;
 
     // Step 2: Make sure forbidden characters are not used (to prevent SQL injection attacks).
 
-    if (!helper.isOK(usernameToCreate) || !helper.isOK(password)) {
+    if (!helper.isOK(usernameToCreate) || !helper.isOK(password) || !helper.isOK(firstName) || !helper.isOK(lastName) || !helper.isOK(email) || !helper.isOK(affiliation) || !helper.isOK(birthday)) {
         return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
     }
 
@@ -80,10 +86,12 @@ var postRegister = async function(req, res) {
             console.log("All good! You can proceed.")
         }
     } catch (error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
 
     // Step 4: Hash and salt the password! 
+    console.log("HERE")
 
 
     helper.encryptPassword(password, async function(err, hashPassword) {
@@ -96,8 +104,8 @@ var postRegister = async function(req, res) {
         // Step 5: Add to table
 
         const insertQuery = `
-        INSERT INTO users (username, hashed_password) 
-        VALUES ('${usernameToCreate}', '${hashedPassword}');
+        INSERT INTO users (username, hashed_password, email, affiliation, birthday, firstName, lastName, photo_id, actor_id) 
+        VALUES ('${usernameToCreate}', '${hashedPassword}', '${email}', '${affiliation}', '${birthday}', '${firstName}', '${lastName}', NULL, NULL);
         `;
 
 

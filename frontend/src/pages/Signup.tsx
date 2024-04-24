@@ -9,6 +9,11 @@ export default function Signup() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [affiliation, setAffiliation] = useState("");
+  const [birthday, setBirthday] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   // TODO: set appropriate state variables
 
@@ -28,6 +33,11 @@ export default function Signup() {
       const response = await axios.post(`${rootURL}/register`, {
         username,
         password,
+        email,
+        affiliation,
+        birthday,
+        firstName,
+        lastName,
       });
 
       if (response.status === 200) {
@@ -58,6 +68,66 @@ export default function Signup() {
               className="outline-none bg-white rounded-md border border-slate-100 p-2"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="firstName" className="font-semibold">
+              First Name
+            </label>
+            <input
+              id="firstName"
+              type="text"
+              className="outline-none bg-white rounded-md border border-slate-100 p-2"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+          </div>
+          <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="lastName" className="font-semibold">
+              Last Name
+            </label>
+            <input
+              id="lastName"
+              type="text"
+              className="outline-none bg-white rounded-md border border-slate-100 p-2"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+            />
+          </div>
+          <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="email" className="font-semibold">
+              Email
+            </label>
+            <input
+              id="email"
+              type="text"
+              className="outline-none bg-white rounded-md border border-slate-100 p-2"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="birthday" className="font-semibold">
+              Birthday
+            </label>
+            <input
+              id="birthday"
+              type="text"
+              className="outline-none bg-white rounded-md border border-slate-100 p-2"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+            />
+          </div>
+          <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="affiliation" className="font-semibold">
+              Affiliation
+            </label>
+            <input
+              id="affiliation"
+              type="text"
+              className="outline-none bg-white rounded-md border border-slate-100 p-2"
+              value={affiliation}
+              onChange={(e) => setAffiliation(e.target.value)}
             />
           </div>
           <div className="flex space-x-4 items-center justify-between">

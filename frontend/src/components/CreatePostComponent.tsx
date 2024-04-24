@@ -7,6 +7,7 @@ function CreatePostComponent({ updatePosts }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const { username } = useParams();
+  const [file, setFile] = useState<File | null>(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +53,13 @@ function CreatePostComponent({ updatePosts }) {
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
+          <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="content" className="font-semibold">
+              Photo
+            </label>
+            <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+          </div>
+
           <div className="flex space-x-4 items-center justify-between">
             <label htmlFor="content" className="font-semibold">
               Content
