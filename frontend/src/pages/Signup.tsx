@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import config from "../../config.json";
+axios.defaults.withCredentials = true;
 
 export default function Signup() {
   const navigate = useNavigate();

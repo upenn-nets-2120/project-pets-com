@@ -22,6 +22,9 @@ const config = require('../config.json'); // Load configuration
 const bcrypt = require('bcrypt'); 
 const helper = require('../routes/route_helper.js');
 const { ConnectContactLens } = require("aws-sdk");
+const {S3Client, PutObjectCommand} = require("@aws-sdk/client-s3");
+
+//const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
 
 // Database connection setup
 const db = dbsingleton;
@@ -79,6 +82,7 @@ var postRegister = async function(req, res) {
     const checkUsernameQuery = `SELECT * FROM users WHERE username = '${usernameToCreate}'`;
     try {
         const results = await db.send_sql(checkUsernameQuery);
+
         
         if (results.length > 0) {
             return res.status(409).json({error: "An account with this username already exists, please try again."});
@@ -108,9 +112,16 @@ var postRegister = async function(req, res) {
         VALUES ('${usernameToCreate}', '${hashedPassword}', '${email}', '${affiliation}', '${birthday}', '${firstName}', '${lastName}', NULL, NULL);
         `;
 
+        console.log("HERE! abvoe resp")
+
 
         try {
-            await db.insert_items(insertQuery);
+            console.log("in try")
+            const resp = await db.insert_items(insertQuery);
+            console.log("resp  " + resp);
+            req.session.user_id = resp.user_id; 
+            req.session.username = usernameToCreate; 
+            console.log("above return")
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
             console.log(error)
@@ -263,44 +274,70 @@ var createPost = async function(req, res) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     };
 
-    if (!req.body.title || !req.body.content) {
+
+    if (!req.body.title || !req.body.image || !req.body.captions) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     };
 
     const title = req.body.title;
-    const content = req.body.content;
+    const image = req.body.image;
+    const captions = req.body.captions;
 
     // Step 3: Make sure forbidden characters are not used (to prevent SQL injection attacks).
 
-    if (!helper.isOK(title) || !helper.isOK(content)) {
+    //image URL has forbidden characters?
+    if (!helper.isOK(title) || !helper.isOK(captions)) {
         return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
+    }
+
+
+    const userID = req.session.user_id;
+
+    //image_id would require a unique title
+    const image_id = userID+"-"+title.replace(" ", "")
+
+    const checkTitleQuery = `
+    SELECT image_id
+    FROM posts
+    WHERE image_id = '${image_id}'
+    `
+
+    //Checks if image id already exists
+
+    try {
+        const results = await db.send_sql(checkTitleQuery);
+        
+        if (results.length > 0) {
+            return res.status(409).json({error: "A post with a title posted by you has been made"});
+        } else {
+            console.log("All good! You can proceed.")
+        }
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.'});
     }
 
     // Step 4: Create post 
 
-    const userID = req.session.user_id;
-    var parentID = req.body.parent_id;
 
     var insertPostQuery =  `
-        INSERT INTO posts (parent_post, title, content, author_id) 
-        VALUES ('${parentID}', '${title}', '${content}', '${userID}');
+        INSERT INTO posts (author_id, title, image_id, captions) 
+        VALUES (${userID}, '${title}', '${image_id}', '${captions}');
         `;
 
-    if (parentID == null || parentID == 'null') {
-        insertPostQuery = `
-        INSERT INTO posts (parent_post, title, content, author_id) 
-        VALUES (null, '${title}', '${content}', '${userID}');
-        `;
-    } 
+    console.log("Above try!")
 
     try {
         await db.insert_items(insertPostQuery);
+        console.log("s3 ing ...")
+        const resp = await putS3Object("photos-pets-com", image, image_id);
+        console.log("Returning ...")
         return res.status(201).json({message: "Post created."});
     } catch(error) {
+        console.log(error);
         return res.status(500).json({error: 'Error querying database.', error});
     }
 
-    // TODO: add to posts table
 }
 
 // GET /feed
@@ -385,6 +422,42 @@ var getMovie = async function(req, res) {
 
 /* Here we construct an object that contains a field for each route
    we've defined, so we can call the routes from app.js. */
+
+   async function putS3Object(bucket, object, key){
+    const s3Client = new S3Client({region: "us-east-1"});
+
+    const inputParams = {
+        "Body": object,
+        "Bucket": bucket,
+        "Key": key
+    }
+
+    const command = new PutObjectCommand(inputParams);
+    try{
+        const response = await s3Client.send(command)
+    } catch(error){
+        console.log("Error putting object in s3", error);
+        throw error;
+    }
+   }
+
+   async function getS3ImageURL(bucket, key){
+    const s3Client = new S3Client({region: "us-east-1"});
+
+    const inputParams = {
+        "Bucket": bucket,
+        "Key": key
+    }
+
+    try{
+        const p = s3Client.getSignedUrlPromise('getObject', inputParams);
+        return p;
+    } catch(error){
+        console.log("Error getting object URL from s3", error);
+        throw error;
+    }
+   }
+
 
 var routes = { 
     get_helloworld: getHelloWorld,

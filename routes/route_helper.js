@@ -22,6 +22,7 @@ var route_helper = function() {
         // which should only be possible if they've been authenticated
         // It can look at either an ID (as an int) or a username (as a string)
         isLoggedIn: (req, obj) => {
+            console.log("logging" + req.session.username +" " + req.session.user_id + " " + obj);
             if (typeof obj === 'string' || obj instanceof String)
                 return req.session.username != null && req.session.username == obj;
             else

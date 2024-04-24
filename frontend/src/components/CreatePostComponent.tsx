@@ -2,12 +2,20 @@ import React, { useState } from "react";
 import axios from "axios";
 import config from "../../config.json";
 import { useParams } from "react-router-dom";
+axios.defaults.withCredentials = true;
 
 function CreatePostComponent({ updatePosts }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const { username } = useParams();
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState(null);
+  const [fileURL, setFileURL] = useState("");
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFile(file);
+    setFileURL(URL.createObjectURL(e.target.files[0]));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,8 +24,9 @@ function CreatePostComponent({ updatePosts }) {
       const response = await axios.post(
         `${config.serverRootURL}/${username}/createPost`,
         {
-          title,
-          content,
+          title: title,
+          captions: content,
+          image: fileURL,
         },
         { withCredentials: true }
       );
@@ -26,6 +35,8 @@ function CreatePostComponent({ updatePosts }) {
         // Clear input fields
         setTitle("");
         setContent("");
+        setFile(null);
+        setFileURL("");
         // Update posts
         updatePosts();
       }
@@ -57,12 +68,12 @@ function CreatePostComponent({ updatePosts }) {
             <label htmlFor="content" className="font-semibold">
               Photo
             </label>
-            <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+            <input type="file" accept="image/*" onChange={handleFileChange} />
           </div>
 
           <div className="flex space-x-4 items-center justify-between">
             <label htmlFor="content" className="font-semibold">
-              Content
+              Caption
             </label>
             {/* <input id="content" type="text" className='outline-none bg-white rounded-md border border-slate-100 p-2'
             value={content} onChange={(e) => setContent(e.target.value)} /> */}
@@ -75,6 +86,7 @@ function CreatePostComponent({ updatePosts }) {
               required
             ></textarea>
           </div>
+          {file && <img src={fileURL} width={"300px"} height={"500px"} />}
 
           <div className="w-full flex justify-center">
             <button
