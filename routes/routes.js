@@ -119,7 +119,6 @@ var postRegister = async function(req, res) {
             console.log("in try")
             const resp = await db.insert_items(insertQuery);
             console.log("resp  " + resp);
-            req.session.user_id = resp.user_id; 
             req.session.username = usernameToCreate; 
             console.log("above return")
             return res.status(200).json({ username: usernameToCreate });
