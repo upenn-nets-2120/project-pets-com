@@ -55,24 +55,22 @@ var postRegister = async function(req, res) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
 
-    if (!req.body.username || !req.body.password || !req.body.linked_id) {
+    if (!req.body.username || !req.body.password) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
 
     const usernameToCreate = req.body.username;
-    const linkedId = req.body.linked_id;
     const password = req.body.password;
 
     // Step 2: Make sure forbidden characters are not used (to prevent SQL injection attacks).
 
-    if (!helper.isOK(usernameToCreate) || !helper.isOK(password) || !helper.isOK(linkedId)) {
+    if (!helper.isOK(usernameToCreate) || !helper.isOK(password)) {
         return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
     }
 
     // Step 3: Make sure account doesn't already exist
 
     const checkUsernameQuery = `SELECT * FROM users WHERE username = '${usernameToCreate}'`;
-
     try {
         const results = await db.send_sql(checkUsernameQuery);
         
@@ -87,23 +85,27 @@ var postRegister = async function(req, res) {
 
     // Step 4: Hash and salt the password! 
 
+
     helper.encryptPassword(password, async function(err, hashPassword) {
         if (err) {
             return res.status(500).json({error: 'Error querying database.'});
         }
         const hashedPassword = hashPassword;
 
+
         // Step 5: Add to table
 
         const insertQuery = `
-        INSERT INTO users (username, hashed_password, linked_nconst) 
-        VALUES ('${usernameToCreate}', '${hashedPassword}', '${linkedId}');
+        INSERT INTO users (username, hashed_password) 
+        VALUES ('${usernameToCreate}', '${hashedPassword}');
         `;
+
 
         try {
             await db.insert_items(insertQuery);
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
+            console.log(error)
             return res.status(500).json({error: 'Error querying database.'});
         }
     });
