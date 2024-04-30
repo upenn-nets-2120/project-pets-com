@@ -58,7 +58,6 @@ var chat_leave = async function (req,res) {
     }
 }
 
-
 //POST /:username/:chat_id/add
 var chat_add = async function (req,res) {
     //STEP 1: Make sure user is logged in
@@ -128,7 +127,6 @@ var chat_message = async function (req,res) {
         return res.status(500).json({error: 'Error querying database.', error});
     }
 }
-
 
 //POST /:username/follow?=person
 var follow = async function (req,res) {
