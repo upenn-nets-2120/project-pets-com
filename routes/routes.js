@@ -23,6 +23,7 @@ const bcrypt = require('bcrypt');
 const helper = require('../routes/route_helper.js');
 const { ConnectContactLens } = require("aws-sdk");
 const {S3Client, PutObjectCommand} = require("@aws-sdk/client-s3");
+const { fromIni } = require("@aws-sdk/credential-provider-ini");
 
 //const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
 
@@ -35,7 +36,6 @@ var vectorStore = null;
 var getHelloWorld = function(req, res) {
     res.status(200).send({message: "Hello, world!"});
 }
-
 
 var getVectorStore = async function(req) {
     if (vectorStore == null) {
@@ -247,7 +247,6 @@ var getFriendRecs = async function(req, res) {
 
 // POST /createPost
 var createPost = async function(req, res) {
-
     // Step 1: Make sure the user is logged in.
 
     let username = req.params.username;
@@ -314,7 +313,7 @@ var createPost = async function(req, res) {
         `;
 
     console.log("Above try!")
-
+    
     try {
         await db.insert_items(insertPostQuery);
         console.log("s3 ing ...")
@@ -412,7 +411,15 @@ var getMovie = async function(req, res) {
    we've defined, so we can call the routes from app.js. */
 
    async function putS3Object(bucket, object, key){
-    const s3Client = new S3Client({region: "us-east-1"});
+
+    const credentials = fromIni({
+        accessKeyId: "ASIAY4MQ7YIS5V57DYPR",
+        secretAccessKey: "pHsm9hjM5kXxPPmqc02U3j4btWJJBYIgBnNBOfV9",
+        sessionToken: "IQoJb3JpZ2luX2VjEMv//////////wEaCXVzLXdlc3QtMiJHMEUCIFcQCpgIAgajqYKqMqoRkPNitbl3Mn0i0F0Db3HrIcBKAiEAovqmFmQpV/5FsG1Wk4VykbQoV47GYyFVtIcoE5CxvD4qnQIIJBACGgw2MTA3MjYyOTgxNDkiDI8KYQjBfesAeefRRSr6AeTo8MxZjjqc9jXMVqswLOjtgjDO9tf3hzwevV2lYLLg9YhNeCZbKLyCLjoFVArq92n7SdxJHAIBUBGs4lDxRcLMDVXC+1cmiF6dRvjpH393WASGP5SXXaMmdnC/sQFzpoal9yZHM3t+qrrLrZp0JklUkaA0Du0E0xsrvKPivb15FI8W0ts5klOEpE//pHDmnNOl9AbWB4TkYU4DA6hQDiKMbZ5ZeMa8l0xnieAw4gaFopA2r881JWl9EqQ37R/q4M0cLA4xUVpJECueIguNbZ2T0Yt3laIawh6sTgY14+80nkulPDwO6/UZ/EUXE0TP2AGr17/WHDqjKCEwsb7BsQY6nQGbT7I83l6KQOkQGCuLgs70jIg49KJyC+IsROrFy1EQyq5bX8K9bmcluTdLVYHTa+qLPM8vVH085nEdOknpxsTkjWYKKH34Sa3d9hwC0M4nvZ/hbTHI7TLS8GaQMHYRb1ZdIa+NpfQGbRUJVzWfMad7uUS3xWYYYPeQ997Jvg063HdM5aL/S5AGlpxRL/13iJ66E61Fj7NfkyDpq2rQ"
+    });
+
+
+    const s3Client = new S3Client({region: "us-east-1", credentials: credentials});
 
     const inputParams = {
         "Body": object,
