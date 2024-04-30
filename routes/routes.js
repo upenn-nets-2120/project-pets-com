@@ -25,6 +25,9 @@ const helper = require('../routes/route_helper.js');
 const { ConnectContactLens } = require("aws-sdk");
 const {S3Client, PutObjectCommand, GetObjectCommand} = require("@aws-sdk/client-s3");
 
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
 //const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
 
 // Database connection setup
@@ -255,94 +258,106 @@ var createPost = async function(req, res) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
 
-    // Step 2: Make sure all fields are provided.
+    const upload = multer().single('image');
 
-    if (!req.body) {
-        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
-    };
-
-
-    if (!req.body.title || !req.body.image || !req.body.captions) {
-        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
-    };
-
-    const title = req.body.title;
-    const image = req.body.image;
-    const captions = req.body.captions;
-
-    // Step 3: Make sure forbidden characters are not used (to prevent SQL injection attacks).
-
-    //image URL has forbidden characters?
-    if (!helper.isOK(title) || !helper.isOK(captions)) {
-        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
-    }
-
-
-    const userID = req.session.user_id;
-    if(userID == null || userID == undefined){
-        try {
-            const results = await db.send_sql(`SELECT user_id FROM users WHERE username = '${username}'`);
-            //Is this the correct way to use results??
-            const userID = results.user_id;
-            req.session.user_id = results.user_id;
-        } catch(error) {
-            console.log(error)
-            return res.status(500).json({error: 'Error querying database.'});    
+    upload(req, res, async function(err) {
+        if (err) {
+            // console.error('Error parsing form data:', err);
+            return res.status(500).json({ error: 'Error parsing form data.' });
         }
 
-    }
+        // Step 2: Make sure all fields are provided.
 
-    //image_id would require a unique title
-    const image_id = userID+"-"+title.replace(" ", "")
-
-    const checkTitleQuery = `
-    SELECT image_id
-    FROM posts
-    WHERE image_id = '${image_id}'
-    `
-
-    //Checks if image id already exists
-
-    try {
-        const results = await db.send_sql(checkTitleQuery);
-        
-        if (results.length > 0) {
-            return res.status(409).json({error: "A post with a title posted by you has been made"});
-        } else {
-            console.log("All good! You can proceed.")
-        }
-    } catch (error) {
-        console.log(error)
-        return res.status(500).json({error: 'Error querying database.'});
-    }
-
-    // Step 4: Create post 
-
-
-    var insertPostQuery =  `
-        INSERT INTO posts (author_id, title, image_id, captions) 
-        VALUES (${userID}, '${title}', '${image_id}', '${captions}');
-        `;
-
-    console.log("Above try!")
+        if (!req.body) {
+            return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+        };
     
-    try {
-        await db.insert_items(insertPostQuery);
-        console.log("s3 ing ...")
-        const resp = await putS3Object("photos-pets-com", image, image_id);
-        console.log("Returning ...")
-        return res.status(201).json({message: "Post created."});
-    } catch(error) {
-        console.log(error);
-        return res.status(500).json({error: 'Error querying database.', error});
-    }
+        if (!req.body.title || !req.file || !req.body.captions) {
+            return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+        };
 
-}
+        // Step 3: Make sure forbidden characters are not used (to prevent SQL injection attacks).
+
+        const title = req.body.title;
+        const image = req.file;
+        const captions = req.body.captions;
+
+        // console.log(title)
+        // console.log(image)
+        // console.log(captions)
+
+        //image URL has forbidden characters?
+        if (!helper.isOK(title) || !helper.isOK(captions)) {
+            return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
+        }
+
+
+        const userID = req.session.user_id;
+        if(userID == null || userID == undefined){
+            try {
+                const results = await db.send_sql(`SELECT user_id FROM users WHERE username = '${username}'`);
+                //Is this the correct way to use results??
+                const userID = results.user_id;
+                req.session.user_id = results.user_id;
+            } catch(error) {
+                // console.log(error)
+                return res.status(500).json({error: 'Error querying database.'});    
+            }
+
+        }
+
+        //image_id would require a unique title
+        const image_id = userID+"-"+title.replace(" ", "")
+
+        const checkTitleQuery = `
+        SELECT image_id
+        FROM posts
+        WHERE image_id = '${image_id}'
+        `
+
+        //Checks if image id already exists
+
+        try {
+            const results = await db.send_sql(checkTitleQuery);
+        
+            if (results.length > 0) {
+                return res.status(409).json({error: "A post with a title posted by you has been made"});
+            } else {
+                console.log("All good! You can proceed.")
+            }
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({error: 'Error querying database.'});
+        }
+
+        // Step 4: Create post 
+
+
+        var insertPostQuery =  `
+            INSERT INTO posts (author_id, title, image_id, captions) 
+            VALUES (${userID}, '${title}', '${image_id}', '${captions}');
+            `;
+
+        console.log("Above try!")
+    
+        try {
+            await db.insert_items(insertPostQuery);
+            console.log("s3 ing ...")
+            const resp = await putS3Object("photos-pets-com", image, image_id);
+            console.log("Returning ...")
+            return res.status(201).json({message: "Post created."});
+        } catch(error) {
+            console.log(error);
+            return res.status(500).json({error: 'Error querying database.', error});
+        }
+
+    });
+}   
 
 // GET /feed
 var getFeed = async function(req, res) {
 
-    console.log("HREEREER!!!")
+    // console.log("HREEREER!!!")
 
     // Step 1: Make sure the user is logged in.
 
@@ -353,7 +368,7 @@ var getFeed = async function(req, res) {
     }
 
     const userID = req.session.user_id;
-    console.log("Above query");
+    // console.log("Above query");
 
     // Step 2: Get feed. 
 
@@ -363,27 +378,28 @@ var getFeed = async function(req, res) {
         SELECT follower 
         FROM friends
         WHERE ${userID} = followed
-    ) OR u.user_id = ${userID} `
+    ) OR u.user_id = ${userID} 
+    ORDER BY p.post_id DESC;`;
 
-    console.log(userID)
-    console.log(getFeedQuery)
+    // console.log(userID)
+    // console.log(getFeedQuery)
 
     try {
-        console.log("HERE!")
+        // console.log("HERE!")
         const results = await db.send_sql(getFeedQuery);
-        console.log(results)
-        console.log("SHOULD HAVE JUST PRINTED!!")
-        const returner = results.map(async (inp) => ({
+        // console.log(results)
+        // console.log("SHOULD HAVE JUST PRINTED!!")
+        const returner = await Promise.all(results.map(async (inp) => ({
             "post_id": inp.post_id,
             "username": inp.username,
             "title": inp.title,
-            "img_url": await getS3ImageURL("photos-pets-com", inp.image_id ),
+            "img_url": await getS3ImageURL("photos-pets-com", inp.image_id),
             "captions": inp.captions
-        }))
-        console.log(returner)
+        })));
+        // console.log(returner)
         return res.status(200).json({results: returner});
     } catch(error) {
-        console.log(error)
+        // console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
     
@@ -427,17 +443,16 @@ var getMovie = async function(req, res) {
 /* Here we construct an object that contains a field for each route
    we've defined, so we can call the routes from app.js. */
 
-   async function putS3Object(bucket, object, key){
+   async function putS3Object(bucket, file, key){
     const credentials = fromIni({
         accessKeyId:  process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
         sessionToken: process.env.AUTH_TOKEN
     });
-    const s3Client = new S3Client({region: "us-east-1",
-    credentials: credentials});
+    const s3Client = new S3Client({region: "us-east-1", credentials: credentials});
 
     const inputParams = {
-        "Body": object,
+        "Body": file.buffer,
         "Bucket": bucket,
         "Key": key
     }
@@ -467,8 +482,10 @@ var getMovie = async function(req, res) {
     try{
         const command = new GetObjectCommand(inputParams);
         const results = await s3Client.send(command);
-        const bodyContents = await streamToString(results.Body);
-        return await bodyContents;
+        console.log(results.Body)
+        const imageBuffer = await streamToBuffer(results.Body);
+        const imageDataUrl = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+        return await imageDataUrl;
     } catch(error){
         console.log("Error getting object URL from s3", error);
         return ''
@@ -484,6 +501,15 @@ var getMovie = async function(req, res) {
       stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
     });
   }
+
+  async function streamToBuffer(readableStream) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        readableStream.on('data', (chunk) => chunks.push(chunk));
+        readableStream.on('end', () => resolve(Buffer.concat(chunks)));
+        readableStream.on('error', reject);
+    });
+}
 
 
 var routes = { 
