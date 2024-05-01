@@ -23,10 +23,11 @@ const config = require('../config.json'); // Load configuration
 const bcrypt = require('bcrypt'); 
 const helper = require('../routes/route_helper.js');
 const { ConnectContactLens } = require("aws-sdk");
-const {S3Client, PutObjectCommand, GetObjectCommand} = require("@aws-sdk/client-s3");
-
+const {S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand} = require("@aws-sdk/client-s3");
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const crypto = require('crypto')
+const {getSignedUrl} = require('@aws-sdk/s3-request-presigner')
+
 
 //const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
 
@@ -359,9 +360,9 @@ var createPost = async function(req, res) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
 
-    const upload = multer().single('image');
+    
 
-    upload(req, res, async function(err) {
+
         if (err) {
             // console.error('Error parsing form data:', err);
             return res.status(500).json({ error: 'Error parsing form data.' });
@@ -408,7 +409,9 @@ var createPost = async function(req, res) {
         }
 
         //image_id would require a unique title
-        const image_id = userID+"-"+title.replace(" ", "")
+        const randomImageName = (bytes= 32) => crypto.randomBytes(bytes).toString('hex')
+
+        const image_id = randomImageName()
 
         const checkTitleQuery = `
         SELECT image_id
@@ -452,8 +455,7 @@ var createPost = async function(req, res) {
             return res.status(500).json({error: 'Error querying database.', error});
         }
 
-    });
-}   
+    };
 
 // GET /feed
 var getFeed = async function(req, res) {
@@ -676,7 +678,8 @@ var search = async function (req,res) {
     const inputParams = {
         "Body": file.buffer,
         "Bucket": bucket,
-        "Key": key
+        "Key": key,
+        "ContentType": file.mimetype
     }
 
     const command = new PutObjectCommand(inputParams);
@@ -703,11 +706,10 @@ var search = async function (req,res) {
 
     try{
         const command = new GetObjectCommand(inputParams);
-        const results = await s3Client.send(command);
-        console.log(results.Body)
-        const imageBuffer = await streamToBuffer(results.Body);
-        const imageDataUrl = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
-        return await imageDataUrl;
+        const url = await getSignedUrl(s3Client, command, {expiresIn: 3600})
+        //console.log(results.Body)
+
+        return url;
     } catch(error){
         console.log("Error getting object URL from s3", error);
         return ''
@@ -715,23 +717,33 @@ var search = async function (req,res) {
     }
    }
 
-   async function streamToString(stream) {
-    const chunks = [];
-    return new Promise((resolve, reject) => {
-      stream.on("data", (chunk) => chunks.push(chunk));
-      stream.on("error", reject);
-      stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+   async function deleteS3ImageURL(bucket, key){
+    const credentials = fromIni({
+        accessKeyId:  process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        sessionToken: process.env.AUTH_TOKEN
     });
-  }
+    const s3Client = new S3Client({region: "us-east-1", credentials: credentials});
 
-  async function streamToBuffer(readableStream) {
-    return new Promise((resolve, reject) => {
-        const chunks = [];
-        readableStream.on('data', (chunk) => chunks.push(chunk));
-        readableStream.on('end', () => resolve(Buffer.concat(chunks)));
-        readableStream.on('error', reject);
-    });
-}
+    const inputParams = {
+        "Bucket": bucket,
+        "Key": key
+    }
+
+    try{
+        const command = new DeleteObjectCommand(inputParams);
+        await s3Client.send(command)
+        //console.log(results.Body)
+    } catch(error){
+        console.log("Error getting object URL from s3", error);
+        return ''
+        //throw error;
+    }
+   }
+
+
+
+  
 
 
 var routes = { 
