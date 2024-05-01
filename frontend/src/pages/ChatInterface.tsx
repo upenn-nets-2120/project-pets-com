@@ -40,6 +40,9 @@ export default function ChatInterface() {
   const friends = () => {
     navigate("/" + username + "/friends");
   };
+  const profile = () => {
+    navigate("/" + username + "/profile");
+  };
 
   const sendMessage = async () => {
     // TODO: add the user's message to the messages state
@@ -70,7 +73,7 @@ export default function ChatInterface() {
           <button
             type="button"
             className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
-            onClick={feed}
+            onClick={profile}
           >
             Profile
           </button>
@@ -81,6 +84,21 @@ export default function ChatInterface() {
             onClick={friends}
           >
             Friends
+          </button>
+          &nbsp;
+          <button
+            type="button"
+            className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
+            onClick={feed}
+          >
+            Feed
+          </button>
+          &nbsp;
+          <button
+            type="button"
+            className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
+          >
+            Chat
           </button>
         </div>
       </div>

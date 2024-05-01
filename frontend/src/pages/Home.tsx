@@ -30,6 +30,10 @@ export default function Home() {
     navigate("/" + username + "/chat");
   };
 
+  const profile = () => {
+    navigate("/" + username + "/profile");
+  };
+
   // TODO: add state variable for posts
 
   const fetchData = async () => {
@@ -61,9 +65,24 @@ export default function Home() {
           <button
             type="button"
             className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
+            onClick={profile}
+          >
+            Profile
+          </button>
+          &nbsp;
+          <button
+            type="button"
+            className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
             onClick={friends}
           >
             Friends
+          </button>
+          &nbsp;
+          <button
+            type="button"
+            className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
+          >
+            Feed
           </button>
           &nbsp;
           <button
