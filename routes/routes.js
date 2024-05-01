@@ -180,6 +180,51 @@ var postLogin = async function(req, res) {
 };
 
 
+// POST /updateProfile
+var updateProfile = async function (req,res) {
+    // TODO: update profile with given parameters
+    // Change Passwords
+    // Change Hashtags
+    // Change Linked Actors
+
+    //Step 1: Check sign-in
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    // Step 2: Make sure all fields are provided
+    if (!req.body) {
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+    }
+    if (!req.body.password) { //add more later
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+    }
+    const password = req.body.password;
+    // Step 3: Make sure forbidden characters are not used (to prevent SQL injection attacks).
+    if (!helper.isOK(password)) { //add more later
+        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
+    }
+
+    // Step 4: Hash and salt the password! 
+    helper.encryptPassword(password, async function(err, hashPassword) {
+        if (err) {
+            return res.status(500).json({error: 'Error querying database.', err});
+        }
+        const hashedPassword = hashPassword;
+
+        // Step 5: Update Table
+        const updatePasswordQuery = `UPDATE users SET hashed_password = '${hashedPassword}' WHERE username = '${username}';`;
+        try {
+            //REGISTER TO DATABASE
+            console.log(updatePasswordQuery);
+            await db.insert_items(updatePasswordQuery);
+            return res.status(200).json({ message: "Profile Updated Successfully" });
+        } catch(error) {
+            console.log(error);
+            return res.status(500).json({error: 'Error querying database.', error});
+        }
+    });
+}
 // GET /logout
 var postLogout = function(req, res) {
   // TODO: fill in log out logic to disable session info
@@ -700,6 +745,7 @@ var routes = {
     get_helloworld: getHelloWorld,
     post_login: postLogin,
     post_register: postRegister,
+    update_profile: updateProfile,
     post_logout: postLogout, 
     get_friends: getFriends,
     get_friend_recs: getFriendRecs,

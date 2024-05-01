@@ -8,6 +8,7 @@ function register_routes(app) {
     app.get('/hello', routes.get_helloworld);
     app.post('/login', routes.post_login);
     app.post('/register', routes.post_register); 
+    app.post('/:username/updateProfile',routes.update_profile);
     app.get('/logout', routes.post_logout); 
     app.get('/:username/friends', routes.get_friends);
     app.get('/:username/recommendations', routes.get_friend_recs);
