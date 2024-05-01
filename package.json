@@ -26,6 +26,7 @@
     "fs": "^0.0.1-security",
     "helpers": "^0.0.6",
     "langchain": "^0.1.30",
+    "multer": "^1.4.5-lts.1",
     "mysql": "^2.18.1",
     "mysql2": "^3.9.2",
     "nodemon": "^3.0.3",

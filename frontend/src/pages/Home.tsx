@@ -9,10 +9,11 @@ axios.defaults.withCredentials = true;
 
 export default function Home() {
   interface Feed {
+    post_id: number;
     username: string;
-    parent_post: number;
     title: string;
-    content: string;
+    img_url: string;
+    captions: string;
   }
 
   const { username } = useParams();
@@ -35,15 +36,22 @@ export default function Home() {
     // TODO: fetch posts data and set appropriate state variables
     try {
       const feedResponse = await axios.get(`${rootURL}/${username}/feed`);
-      setFeed(feedResponse.data);
+
+      if (feedResponse.status == 403) {
+        navigate("/");
+      }
+      if (feedResponse.status == 200) {
+        setFeed(feedResponse.data.results);
+      }
     } catch (error) {
       console.error("Error fetching feed data:", error);
+      //navigate("/");
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []);
 
   return (
     <div className="w-screen h-screen">
@@ -70,17 +78,17 @@ export default function Home() {
 
       <div className="h-full w-full mx-auto max-w-[1800px] flex flex-col items-center space-y-4">
         <CreatePostComponent updatePosts={fetchData} />
-        {
+        {feed &&
           // TODO: map each post to a PostComponent
           feed.map((feed, index) => (
             <PostComponent
               key={index}
               title={feed.title}
               user={feed.username}
-              description={feed.content}
+              description={feed.captions}
+              image={feed.img_url}
             />
-          ))
-        }
+          ))}
       </div>
     </div>
   );

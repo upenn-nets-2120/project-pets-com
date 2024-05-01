@@ -11,24 +11,33 @@ function CreatePostComponent({ updatePosts }) {
   const [file, setFile] = useState(null);
   const [fileURL, setFileURL] = useState("");
 
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFile(file);
     setFileURL(URL.createObjectURL(e.target.files[0]));
+    //console.log(file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log(username);
+      //console.log(username);
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('captions', content);
+      if (file) {
+        formData.append('image', file); 
+      }
       const response = await axios.post(
         `${config.serverRootURL}/${username}/createPost`,
-        {
-          title: title,
-          captions: content,
-          image: fileURL,
-        },
-        { withCredentials: true }
+        formData,
+        { 
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'multipart/form-data' 
+          }
+        }
       );
       console.log(response);
       if (response.status === 201 || response.status === 200) {
@@ -36,7 +45,6 @@ function CreatePostComponent({ updatePosts }) {
         setTitle("");
         setContent("");
         setFile(null);
-        setFileURL("");
         // Update posts
         updatePosts();
       }
