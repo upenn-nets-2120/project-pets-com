@@ -243,27 +243,19 @@ var getFriends = async function(req, res) {
     // TODO: get all friends of current user
 
     // Step 1: Make sure the user is logged in.
-
     const username = req.params.username;
-
-    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+    const user_id = req.session.user_id;
+    if (user_id == null || username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
-
     // Step 2: Get their friends (not necessarily registered users)
-
-    const getFriendsQuery = `SELECT DISTINCT friends.followed AS followed, 
-    followed_names.primaryName AS primaryName
-    FROM users
-    JOIN names ON users.linked_nconst = names.nconst
-    JOIN friends ON friends.follower = names.nconst
-    JOIN names AS followed_names ON friends.followed = followed_names.nconst
-    WHERE users.username = '${username}';`;
-
+    const getFriendsQuery =  `SELECT DISTINCT users.user_id, users.username, users.firstName, users.lastName FROM users JOIN friends ON users.user_id = friends.followed WHERE friends.follower = '${user_id}';`
     try {
         const results = await db.send_sql(getFriendsQuery);
+        console.log(results)
         return res.status(200).json({results: results});
     } catch(error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
 }
@@ -276,25 +268,83 @@ var getFriendRecs = async function(req, res) {
     // Step 1: Make sure the user is logged in.
 
     const username = req.params.username;
-
-    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+    const user_id = req.session.user_id;
+    if (user_id == null || username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
 
     // Step 2: Get their recommendations (not necessarily registered users.)
-
-    const getRecommendationsQuery = `SELECT DISTINCT recommended.nconst AS recommendation, 
-    recommended.primaryName AS primaryName
-    FROM users
-    JOIN names ON users.linked_nconst = names.nconst
-    JOIN recommendations ON recommendations.person = names.nconst
-    JOIN names AS recommended ON recommendations.recommendation = recommended.nconst
-    WHERE users.username = '${username}';`;
+    //Temporary measure, but we should ignore friends we've already added
+    const getRecommendationsQuery = `SELECT DISTINCT user_id, username, firstName, lastName 
+    FROM users 
+    WHERE user_id != ${user_id} 
+    AND user_id NOT IN (
+        SELECT followed 
+        FROM friends 
+        WHERE follower = ${user_id}
+    );`;
     
     try {
         const results = await db.send_sql(getRecommendationsQuery);
         return res.status(200).json({results: results});
     } catch(error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+//POST /:username/follow?=person
+var follow = async function (req,res) {
+    //STEP 1: Make sure user is logged in
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    //STEP 2: Check for input
+    if (!req.body || !req.body.personID) {
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+    }
+    const personID = req.body.personID;
+    if (!helper.isOK(personID)) {
+        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
+    }
+    const userID = req.session.user_id;
+    try {
+        //STEP 3: Follow
+        const addedFriend = await db.insert_items(`INSERT IGNORE INTO friends VALUES (${personID},${userID});`);
+        if (addedFriend == 0) {
+            return res.status(201).json({message: "already friends"});
+        }
+        return res.status(200).json({message: "Friend followed."});
+    } catch (error) {
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+//POST /:username/unfollow?=person
+var unfollow = async function (req,res) {
+    //STEP 1: Make sure user is logged in
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    //STEP 2: Check for input
+    if (!req.body || !req.body.personID) {
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+    }
+    const personID = req.body.personID;
+    if (!helper.isOK(personID)) {
+        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
+    }
+    const userID = req.session.user_id;
+    try {
+        //STEP 3: Unfollow
+        const removeFriend = await db.insert_items(`DELETE FROM friends WHERE (followed = ${personID} AND follower = ${userID});`);
+        if (removeFriend == 0) {
+            return res.status(201).json({message: "never friends"});
+        }
+        return res.status(200).json({message: "Friend unfollowed."});
+    } catch (error) {
         return res.status(500).json({error: 'Error querying database.', error});
     }
 }
@@ -586,63 +636,6 @@ var chat_message = async function (req,res) {
         const addedMessage = await db.insert_items(`INSERT INTO Messages VALUES (${chatID}, ${userID}, ${timestamp}, ${message});`);
         return res.status(200).json({message: "Message Added."});
 
-    } catch (error) {
-        return res.status(500).json({error: 'Error querying database.', error});
-    }
-}
-
-
-//POST /:username/follow?=person
-var follow = async function (req,res) {
-    //STEP 1: Make sure user is logged in
-    let username = req.params.username;
-    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
-        return res.status(403).json( {error: 'Not logged in.'} );
-    }
-    //STEP 2: Check for input
-    if (!req.body || !req.body.personID) {
-        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
-    }
-    const personID = req.body.personID;
-    if (!helper.isOK(personID)) {
-        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
-    }
-    const userID = req.session.user_id;
-    try {
-        //STEP 3: Follow
-        const addedFriend = await db.insert_items(`INSERT IGNORE INTO Friends VALUES (${personID},${userID});`);
-        if (addedFriend == 0) {
-            return res.status(201).json({message: "already friends"});
-        }
-        return res.status(200).json({message: "Friend followed."});
-    } catch (error) {
-        return res.status(500).json({error: 'Error querying database.', error});
-    }
-}
-
-//POST /:username/unfollow?=person
-var unfollow = async function (req,res) {
-    //STEP 1: Make sure user is logged in
-    let username = req.params.username;
-    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
-        return res.status(403).json( {error: 'Not logged in.'} );
-    }
-    //STEP 2: Check for input
-    if (!req.body || !req.body.personID) {
-        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
-    }
-    const personID = req.body.personID;
-    if (!helper.isOK(personID)) {
-        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
-    }
-    const userID = req.session.user_id;
-    try {
-        //STEP 3: Unfollow
-        const removeFriend = await db.insert_items(`DELETE FROM Friends WHERE (followed = ${personID} AND follower = ${userID});`);
-        if (removeFriend == 0) {
-            return res.status(201).json({message: "never friends"});
-        }
-        return res.status(200).json({message: "Friend unfollowed."});
     } catch (error) {
         return res.status(500).json({error: 'Error querying database.', error});
     }
