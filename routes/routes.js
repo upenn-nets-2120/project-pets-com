@@ -113,7 +113,13 @@ var postRegister = async function(req, res) {
         `;
 
         try {
+            //REGISTER TO DATABASE
             await db.insert_items(insertQuery);
+            //SET VALID USER COOKIES
+            const userIDQuery = `SELECT user_id FROM users WHERE username = '${usernameToCreate}';`;
+            const result = await db.send_sql(userIDQuery);
+            req.session.user_id = result[0].user_id; 
+            req.session.username = usernameToCreate; 
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
             return res.status(500).json({error: 'Error querying database.', error});
