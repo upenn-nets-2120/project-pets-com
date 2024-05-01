@@ -1,4 +1,7 @@
 const routes = require('./routes.js');
+const multer = require('multer');
+const storage = multer.memoryStorage()
+const upload = multer({storage: storage });
 
 module.exports = {
     register_routes
@@ -12,7 +15,7 @@ function register_routes(app) {
     app.get('/logout', routes.post_logout); 
     app.get('/:username/friends', routes.get_friends);
     app.get('/:username/recommendations', routes.get_friend_recs);
-    app.post('/:username/createPost', routes.create_post); 
+    app.post('/:username/createPost', upload.single('image'), routes.create_post); 
     app.get('/:username/feed', routes.get_feed); 
     app.post('/:username/movies', routes.get_movie);
     app.post('/:username/:chat_id/leave', routes.chat_leave);
