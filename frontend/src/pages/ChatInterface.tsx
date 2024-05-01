@@ -27,7 +27,7 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState([
     {
       sender: "chatbot",
-      message: "Hi there! What movie review questions do you have?",
+      message: "Hi there! I can reccommend you posts you would like, or people you might want to follow. Ask away!",
     },
   ]);
   const [input, setInput] = useState<string>("");
@@ -72,7 +72,7 @@ export default function ChatInterface() {
             className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
             onClick={feed}
           >
-            Feed
+            Profile
           </button>
           &nbsp;
           <button
@@ -84,7 +84,7 @@ export default function ChatInterface() {
           </button>
         </div>
       </div>
-      <div className="font-bold text-3xl">Internet Movie DB Chat</div>
+      <div className="font-bold text-3xl">Pennstragram AI Chat</div>
       <div className="h-[40rem] w-[30rem] bg-slate-100 p-3">
         <div className="h-[90%] overflow-scroll">
           <div className="space-y-2">

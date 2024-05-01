@@ -71,7 +71,7 @@ export default function Home() {
             className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
             onClick={chat}
           >
-            Chat
+            AI Chat
           </button>
         </div>
       </div>
