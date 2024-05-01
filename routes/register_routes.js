@@ -14,7 +14,11 @@ function register_routes(app) {
     app.post('/:username/createPost', routes.create_post); 
     app.get('/:username/feed', routes.get_feed); 
     app.post('/:username/movies', routes.get_movie);
-    // TODO: register getMovie, which does not need a :username
-    //       Make it compatible with the call from ChatInterface.tsx
+    app.post('/:username/:chat_id/leave', routes.chat_leave);
+    app.post('/:username/:chat_id/add', routes.chat_add);
+    app.post('/:username/:chat_id/message',routes.chat_message);
+    app.post('/:username/follow', routes.follow);
+    app.post('/:username/unfollow',routes.unfollow);
+    app.get('/:username/search',routes.search);
   }
   
