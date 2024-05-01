@@ -363,10 +363,6 @@ var createPost = async function(req, res) {
     
 
 
-        if (err) {
-            // console.error('Error parsing form data:', err);
-            return res.status(500).json({ error: 'Error parsing form data.' });
-        }
 
         // Step 2: Make sure all fields are provided.
 
