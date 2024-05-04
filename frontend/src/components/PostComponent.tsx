@@ -16,7 +16,7 @@ export default function PostComponent({
         posted
       </div>
       <div className="text-2xl font-bold">{title}</div>
-      <img src={image} style={{ width: "300px", height: "200px" }} />
+      {image && <img src={image} style={{ width: "300px", height: "200px" }} />}
       <div className="">{description}</div>
     </div>
   );
