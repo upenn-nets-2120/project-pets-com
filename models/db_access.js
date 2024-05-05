@@ -14,7 +14,8 @@ module.exports = {
     create_tables,
     insert_items,
     send_sql,
-    close_db
+    close_db,
+    get_posts
 }
 
 /**
@@ -60,6 +61,11 @@ async function get_db_connection() {
         });
     });
 }
+
+async function get_posts() {
+    return send_sql("SELECT posts.captions, posts.title FROM posts");
+}
+  
 
 /**
  * Sends an SQL query to the database

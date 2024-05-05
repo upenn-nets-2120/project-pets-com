@@ -1,3 +1,8 @@
+const OpenAI = require("@langchain/openai");
+const DataSource = require("typeorm");
+const { SqlDatabase } = require("langchain/sql_db");
+const { createSqlAgent, SqlToolkit } = require("langchain/agents/toolkits/sql");
+
 const { Chroma } = require("@langchain/community/vectorstores/chroma");
 const { OpenAIEmbeddings } = require("@langchain/openai");
 const { TextLoader } = require("langchain/document_loaders/fs/text");
@@ -8,6 +13,8 @@ const { load } = require("cheerio");
 const { ChromaClient } = require('chromadb')
 const {OpenAIEmbeddingFunction} = require('chromadb');
 const process = require('process');
+
+
 const embedder = new OpenAIEmbeddingFunction({
     openai_api_key: "apiKey", 
     model: "text-embedding-3-small"
@@ -15,8 +22,25 @@ const embedder = new OpenAIEmbeddingFunction({
 const sql = require('./db_access');
 
 module.exports = {
-    get_connection
+    get_connection,
+    get_posts
 }
+
+// export const run = async () => {
+//   const posts = sql.get_posts();
+  
+//   const datasource = new DataSource({
+//     type: "sqlite",
+//     database: posts,
+//   });
+//   const db = await SqlDatabase.fromDataSourceParams({
+//     appDataSource: datasource,
+//   });
+//   const model = new OpenAI({ temperature: 0 });
+//   const toolkit = new SqlToolkit(db, model);
+//   const executor = createSqlAgent(model, toolkit);
+// } 
+
 
 async function get_connection() {
     // Create vector store and index the docs

@@ -1,10 +1,11 @@
 const { OpenAI, ChatOpenAI } = require("@langchain/openai");
 const { PromptTemplate } = require("@langchain/core/prompts");
-const { ChatPromptTemplate } = require("@langchain/core/prompts");
-const { StringOutputParser } = require("@langchain/core/output_parsers");
-const { CheerioWebBaseLoader } = require("langchain/document_loaders/web/cheerio");
-
-const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
+const {SqlDatabase} = require("langchain/sql_db")
+const {DataSource} = require("typeorm")
+// const { ChatPromptTemplate } = require("@langchain/core/prompts");
+// const { StringOutputParser } = require("@langchain/core/output_parsers");
+// const { CheerioWebBaseLoader } = require("langchain/document_loaders/web/cheerio");
+// const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
 const { OpenAIEmbeddings } = require("@langchain/openai");
 const { MemoryVectorStore } = require("langchain/vectorstores/memory");
 const { createStuffDocumentsChain } = require("langchain/chains/combine_documents");
@@ -18,6 +19,8 @@ const {
 const { Chroma } = require("@langchain/community/vectorstores/chroma");
 const { fromIni } = require("@aws-sdk/credential-provider-ini")
 
+
+
 const dbsingleton = require('../models/db_access.js');
 const config = require('../config.json'); // Load configuration
 const bcrypt = require('bcrypt'); 
@@ -27,6 +30,9 @@ const {S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand} = requ
 const multer = require('multer');
 const crypto = require('crypto')
 const {getSignedUrl} = require('@aws-sdk/s3-request-presigner')
+const { createSqlAgent, SqlToolkit } = require("langchain/agents/toolkits/sql");
+
+const process = require('process');
 
 
 //const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
@@ -197,8 +203,9 @@ var updateProfile = async function (req,res) {
     if (!req.body) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
+    console.log(req.body.password)
     if (!req.body.password) { //add more later
-        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again. lol loser'});
     }
     const password = req.body.password;
     // Step 3: Make sure forbidden characters are not used (to prevent SQL injection attacks).
@@ -236,6 +243,10 @@ var postLogout = function(req, res) {
   req.session.user_id = null;
   return res.status(200).json( {message: "You were successfully logged out."} );
 };
+
+var getActors = function(req, res) {
+    return("Unimplemented"); 
+}
 
 
 // GET /friends
@@ -359,11 +370,6 @@ var createPost = async function(req, res) {
     if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
-
-    
-
-
-
         // Step 2: Make sure all fields are provided.
 
         if (!req.body) {
@@ -505,33 +511,71 @@ var getFeed = async function(req, res) {
     // TODO: get the correct posts to show on current user's feed
 }
 
-
+    //console.log(retriever2);
 var getMovie = async function(req, res) {
+    const posts = await db.get_posts();
+
+    const datasource = new DataSource({
+        type: "mysql",
+        database: posts, 
+    });
+    
+    //const postsText = posts.map(post => `${post.title}: ${post.captions}`).join('\n\n');
     const vs = await getVectorStore();
     const retriever = vs.asRetriever();
+    //const contentRetriever = simpleContentRetriever(postsText);
+    //const retriever = createRetrievalChain([retriever2]);
 
     const context = req.body.context;
     const question = req.body.question;
 
+    console.log("1")
+
     const prompt =
     PromptTemplate.fromTemplate(` 
-        Answer the question ${question} given the following context: ${context}
+        Answer the question ${question} given the following context: ${context}. Posts is a database you have access to that holds data regarding posts on a social media site called Pennstagram.
         `);
     
     const llm = new ChatOpenAI({
         model: 'gpt-3.5-turbo',
         temperature: 0,
-    }); // TODO: replace with your language model
+    });    
+    // TODO: replace with your language model
+
+    console.log("2")
+
+    const postdb = await SqlDatabase.fromDataSourceParams({
+        appDataSource: datasource,
+    });
+
+    console.log("3")
+
+    const toolkit = new SqlToolkit(postdb, llm);
+    const executor = createSqlAgent(llm, toolkit);
+
+    console.log("4")
+
+
+    const hybridRetriever = createRetrievalChain([
+        { retriever: retriever },
+        { retriever: executor } 
+    ]);
+
+    console.log("5")
+
 
     const ragChain = RunnableSequence.from([
         {
-            context: retriever.pipe(formatDocumentsAsString),
+            context: hybridRetriever.pipe(formatDocumentsAsString),
             question: new RunnablePassthrough(),
           },
       prompt,
       llm,
       new StringOutputParser(),
     ]);
+
+    console.log("6")
+
 
     result = await ragChain.invoke(req.body.question);
     console.log(result);
@@ -737,10 +781,13 @@ var search = async function (req,res) {
     }
    }
 
-
-
-  
-
+   function simpleContentRetriever(postsText) {
+    return {
+        retrieve: async (query) => {
+            return [{ text: postsText, score: 1 }]; // Assuming the retriever expects an array of results
+        }
+    };
+}
 
 var routes = { 
     get_helloworld: getHelloWorld,
@@ -758,7 +805,8 @@ var routes = {
     chat_message: chat_message,
     follow: follow, 
     unfollow: unfollow,
-    search: search
+    search: search,
+    get_actors: getActors
   };
 
 

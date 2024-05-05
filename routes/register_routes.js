@@ -24,5 +24,7 @@ function register_routes(app) {
     app.post('/:username/follow', routes.follow);
     app.post('/:username/unfollow',routes.unfollow);
     app.get('/:username/search',routes.search);
+    app.get('/:username/getActors', upload.single('image'), routes.get_actors);
+
   }
   
