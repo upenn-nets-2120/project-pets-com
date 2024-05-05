@@ -10,10 +10,11 @@ axios.defaults.withCredentials = true;
 export default function Home() {
   interface Feed {
     post_id: number;
-    username: string;
+    user: string;
     title: string;
     img_url: string;
     captions: string;
+    username: string | undefined;
   }
 
   const { username } = useParams();
@@ -106,6 +107,8 @@ export default function Home() {
               user={feed.username}
               description={feed.captions}
               image={feed.img_url}
+              post_id={feed.post_id}
+              username={username}
             />
           ))}
       </div>

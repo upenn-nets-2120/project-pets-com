@@ -12,6 +12,7 @@ const kafka = new Kafka({
 const producer = kafka.producer()
 
 const sendMessage = async(username, source_site, post_uuid_within_site, post_text, content_type) => {
+    console.log("SENDING MESSAGE!!");
     await producer.connect()
     await producer.send({
     topic: "FederatedPosts",
@@ -56,7 +57,12 @@ const runConsumer = async () => {
     await consumer.run({
         eachMessage: async({topic, partition, message}) => {
             console.log(message)
-            let m = JSON.parse(message.value)
+            let m = {}
+            try{
+            m = JSON.parse(message.value)
+            } catch(error){
+                return;
+            }
             console.log(m)
             if(topic == "Twitter-Kafka"){
                 let mess = null
