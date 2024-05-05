@@ -88,11 +88,24 @@ var addComment = async function(req, res) {
         if(comment.length > 225){
             return res.status(401).json({error: "Comment is too long"})
         }
+
+
         try{
             
         const addComment = `INSERT INTO comments (post_id, commenter_id, comment) VALUES (${post}, ${user_id}, '${comment}')`
+        const regex = /#(\w+)/g;
+        
         
         const results = await db.send_sql(addComment)
+
+      
+        const getId = await db.send_sql(`SELECT comment_id FROM comments WHERE post_id = ${post} AND commenter_id = ${user_id} AND comment = '${comment}'`)
+        const matches = comment.match(regex)
+        matches.map(async match => {
+            const q = `INSERT INTO hashtags (hashtag, post_id, comment_id) VALUES ('${match}', ${post}, ${getId[0].comment_id}) `
+
+            await db.send_sql( q)  
+             })
                 return res.status(200).json({results: results});
             } catch(error){
                 console.log(error)
