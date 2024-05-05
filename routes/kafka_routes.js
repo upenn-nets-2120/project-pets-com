@@ -1,7 +1,10 @@
 const express = require('express');
 const { Kafka } = require('kafkajs');
 const dbsingleton = require('../models/db_access.js');
-
+const {  CompressionTypes, CompressionCodecs } = require('kafkajs')
+const SnappyCodec = require('kafkajs-snappy')
+ 
+CompressionCodecs[CompressionTypes.Snappy] = SnappyCodec
 const db = dbsingleton;
 
 const kafka = new Kafka({
@@ -69,7 +72,7 @@ const runConsumer = async () => {
                 if(m.text){
                     mess = m.text
                 }
-                cPost(14, null, mess);
+                await cPost(14, null, mess);
                 
 
 
@@ -82,7 +85,7 @@ const runConsumer = async () => {
                 if(m.post_text){
                     mess = m.post_text
                 }
-                cPost(15, title, mess );
+                await cPost(15, title, mess );
             }
 
         }

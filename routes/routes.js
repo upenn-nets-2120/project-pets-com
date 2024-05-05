@@ -178,9 +178,11 @@ var postLogin = async function(req, res) {
                 return res.status(401).json({error: 'Username and/or password are invalid.'});
             }
         } catch(error) {
+            console.log(error)
             return res.status(500).json({error: 'Error querying database.'});
         }
     } catch(error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
 };
