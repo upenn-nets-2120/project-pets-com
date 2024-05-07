@@ -2,6 +2,7 @@ const routes = require('./routes.js');
 const multer = require('multer');
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage });
+const otherRoutes= require('./comment_like_routes.js')
 
 module.exports = {
     register_routes
@@ -24,7 +25,11 @@ function register_routes(app) {
     app.post('/:username/follow', routes.follow);
     app.post('/:username/unfollow',routes.unfollow);
     app.get('/:username/search',routes.search);
-    app.get('/:username/getActors', upload.single('image'), routes.get_actors);
+    app.post('/:username/addLike', otherRoutes.addLike)
+    app.post('/:username/addComment', otherRoutes.addComment)
+    app.get('/:username/:post_id/getLike', otherRoutes.getLike)
+    app.get('/:username/:post_id/getComments', otherRoutes.getComments)
+    app.post('/:username/unLike', otherRoutes.unLike )
 
   }
   

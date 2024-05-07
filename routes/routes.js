@@ -30,9 +30,7 @@ const {S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand} = requ
 const multer = require('multer');
 const crypto = require('crypto')
 const {getSignedUrl} = require('@aws-sdk/s3-request-presigner')
-const { createSqlAgent, SqlToolkit } = require("langchain/agents/toolkits/sql");
-
-const process = require('process');
+const kafka = require('./kafka_routes.js')
 
 
 //const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
@@ -127,6 +125,10 @@ var postRegister = async function(req, res) {
             const result = await db.send_sql(userIDQuery);
             req.session.user_id = result[0].user_id; 
             req.session.username = usernameToCreate; 
+            const TwitQuery = `INSERT INTO friends (followed, follwer) VALUES (14, ${result[0].user_id}) `
+            const FedQuery = `INSERT INTO friends (followed, follower) VALUES (15, ${result[0].user_id}) `
+            await db.insert_items(TwitQuery);
+            await db.insert_items(FedQuery);
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
             return res.status(500).json({error: 'Error querying database.', error});
@@ -179,9 +181,11 @@ var postLogin = async function(req, res) {
                 return res.status(401).json({error: 'Username and/or password are invalid.'});
             }
         } catch(error) {
+            console.log(error)
             return res.status(500).json({error: 'Error querying database.'});
         }
     } catch(error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
 };
@@ -376,7 +380,7 @@ var createPost = async function(req, res) {
             return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
         };
     
-        if (!req.body.title || !req.file || !req.body.captions) {
+        if (!req.body.title) {
             return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
         };
 
@@ -415,26 +419,6 @@ var createPost = async function(req, res) {
 
         const image_id = randomImageName()
 
-        const checkTitleQuery = `
-        SELECT image_id
-        FROM posts
-        WHERE image_id = '${image_id}'
-        `
-
-        //Checks if image id already exists
-
-        try {
-            const results = await db.send_sql(checkTitleQuery);
-        
-            if (results.length > 0) {
-                return res.status(409).json({error: "A post with a title posted by you has been made"});
-            } else {
-                console.log("All good! You can proceed.")
-            }
-        } catch (error) {
-            console.log(error)
-            return res.status(500).json({error: 'Error querying database.'});
-        }
 
         // Step 4: Create post 
 
@@ -447,10 +431,37 @@ var createPost = async function(req, res) {
         console.log("Above try!")
     
         try {
+             kafka.sendMessage (username, "g23", userID, captions, 'text/html');
+
+            if(!image && !captions){
+                const insertPostQuery =  `
+                INSERT INTO posts (author_id, title) 
+                VALUES (${userID}, '${title}');
+                `;
+                await db.insert_items(insertPostQuery);
+            } else if(!image){
+                const insertPostQuery =  `
+                     INSERT INTO posts (author_id, title, captions) 
+                VALUES (${userID}, '${title}', '${captions}');
+                `;
+                await db.insert_items(insertPostQuery);
+            } else if(!captions){
+                const insertPostQuery =  `
+            INSERT INTO posts (author_id, title, image_id) 
+            VALUES (${userID}, '${title}', '${image_id}');
+            `;
             await db.insert_items(insertPostQuery);
+            const resp = await putS3Object("photos-pets-com", image, image_id);   
+            } else {
+                const insertPostQuery =  `
+            INSERT INTO posts (author_id, title, image_id, captions) 
+            VALUES (${userID}, '${title}', '${image_id}', '${captions}');
+            `;
             console.log("s3 ing ...")
             const resp = await putS3Object("photos-pets-com", image, image_id);
             console.log("Returning ...")
+
+            }
             return res.status(201).json({message: "Post created."});
         } catch(error) {
             console.log(error);
@@ -458,6 +469,8 @@ var createPost = async function(req, res) {
         }
 
     };
+
+    
 
 // GET /feed
 var getFeed = async function(req, res) {
@@ -480,9 +493,9 @@ var getFeed = async function(req, res) {
     const getFeedQuery = `SELECT p.post_id, u.username, p.title, p.image_id, p.captions
     FROM posts p JOIN users u ON p.author_id = u.user_id
     WHERE u.user_id IN (
-        SELECT follower 
+        SELECT followed
         FROM friends
-        WHERE ${userID} = followed
+        WHERE ${userID} = follower
     ) OR u.user_id = ${userID} 
     ORDER BY p.post_id DESC;`;
 
@@ -498,7 +511,7 @@ var getFeed = async function(req, res) {
             "post_id": inp.post_id,
             "username": inp.username,
             "title": inp.title,
-            "img_url": await getS3ImageURL("photos-pets-com", inp.image_id),
+            "img_url": inp.image_id ? await getS3ImageURL("photos-pets-com", inp.image_id) : null,
             "captions": inp.captions
         })));
         // console.log(returner)
