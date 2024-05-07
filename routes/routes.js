@@ -77,6 +77,7 @@ var postRegister = async function(req, res) {
     const birthday = req.body.birthday;
     const firstName = req.body.firstName;
     const lastName = req.body.lastName;
+    const hashtags = req.body.hashtags
 
     // Step 2: Make sure forbidden characters are not used (to prevent SQL injection attacks).
 
@@ -129,6 +130,16 @@ var postRegister = async function(req, res) {
             const FedQuery = `INSERT INTO friends (followed, follower) VALUES (15, ${result[0].user_id}) `
             await db.insert_items(TwitQuery);
             await db.insert_items(FedQuery);
+            hashtags?.map(async (inp) => {
+                if(inp != ""){ 
+                    if(inp.includes("#")){
+                        await db.insert_items(`INSERT INTO hashtags (hashtag, follower_id) VALUES ('${inp}', ${result[0].user_id} )`);
+                    } else {
+                        const adder = "#" + inp
+                        await db.insert_items(`INSERT INTO hashtags (hashtag, follower_id) VALUES ('${adder}', ${result[0].user_id} )`);
+                    }
+                }
+            })
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
             console.log(error)
@@ -394,7 +405,7 @@ var createPost = async function(req, res) {
         // console.log(captions)
 
         //image URL has forbidden characters?
-        if (!helper.isOK(title) || !helper.isOK(captions)) {
+        if (!helper.isOK(title)) {
             return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
         }
 
@@ -465,8 +476,13 @@ var createPost = async function(req, res) {
             if(captions){
                 const regex = /#(\w+)/g;
                 const matches = captions.match(regex)
+
+                //Need to get PostID!!!
+                const postIDQuery = `SELECT post_id FROM posts WHERE author_id = '${userID}' ${title ? ` AND title = '${title.replace(/'/g, "''")}'` : ''} ${captions ? `AND captions = '${captions.replace(/'/g, "''")}'` : ""};`;
+                const result = await db.send_sql(postIDQuery);
+                const post_id = result[0].post_id; 
                 matches?.map(async match => {
-                    const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post}, ${userID}) `
+                    const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post_id}, ${userID}) `
         
                     await db.send_sql( q)  
                      })

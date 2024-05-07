@@ -36,6 +36,9 @@ function register_routes(app) {
     app.get('/:username/:post_id/getLike', otherRoutes.getLike)
     app.get('/:username/:post_id/getComments', otherRoutes.getComments)
     app.post('/:username/unLike', otherRoutes.unLike )
+    app.get('/topHashtags', otherRoutes.topHashtags)
+    app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
+
     app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
     app.post('/:username/linkActor', faceRoutes.linkActor); 
     app.get('/:username/getLinks', faceRoutes.getLinks); 

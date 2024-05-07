@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import config from "../../config.json";
@@ -15,6 +15,25 @@ export default function Signup() {
   const [birthday, setBirthday] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [hashtags, setHashtags] = useState([""]);
+  const [topHashtags, setTopHashtags] = useState([]);
+
+  const fetchData = async () => {
+    try {
+      const hashResponse = await axios.get(`${rootURL}/topHashtags`);
+
+      if (hashResponse.status == 200) {
+        console.log(hashResponse.data.results.map((inp) => inp.hashtag));
+        setTopHashtags(hashResponse.data.results.map((inp) => inp.hashtag));
+      }
+    } catch (error) {
+      console.error("Error fetching feed data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   // TODO: set appropriate state variables
 
@@ -39,6 +58,7 @@ export default function Signup() {
         birthday,
         firstName,
         lastName,
+        hashtags,
       });
 
       if (response.status === 200) {
@@ -52,8 +72,18 @@ export default function Signup() {
     }
   };
 
+  const changeHashTags = (changer: string, index: number) => {
+    let a = hashtags;
+    a[index] = changer;
+    setHashtags([...a]);
+  };
+
+  const addHashTag = () => {
+    setHashtags((prevHash) => [...prevHash, ""]);
+  };
+
   return (
-    <div className="w-screen h-screen flex items-center justify-center">
+    <div className=" flex items-center justify-center">
       <form onSubmit={handleSubmit}>
         <div className="rounded-md bg-slate-50 p-6 space-y-2 w-full">
           <div className="font-bold flex w-full justify-center text-2xl mb-4">
@@ -155,6 +185,33 @@ export default function Signup() {
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
+          <div className="">
+            <div className="font-semibold text-center ">Hashtags</div>
+            <div className="flex flex-row gap-8">
+              <div className="flex flex-col gap-4">
+                {topHashtags.map((inp) => (
+                  <div> {inp} </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-8">
+                {hashtags.map((inp, index) => (
+                  <input
+                    type="text"
+                    value={inp}
+                    className="outline-none bg-white rounded-md border border-slate-100 p-2"
+                    onChange={(e) => changeHashTags(e.target.value, index)}
+                  />
+                ))}
+                <div
+                  className="cursor-pointer border"
+                  onClick={() => addHashTag()}
+                >
+                  Add Hashtag
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="w-full flex justify-center">
             <button
               onClick={(e) => {
