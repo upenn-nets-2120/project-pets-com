@@ -462,6 +462,20 @@ var createPost = async function(req, res) {
             console.log("Returning ...")
 
             }
+
+            if(captions){
+                const regex = /#(\w+)/g;
+                const matches = captions.match(regex)
+                matches?.map(async match => {
+                    const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post}, ${userID}) `
+        
+                    await db.send_sql( q)  
+                     })
+
+            }
+
+
+
             return res.status(201).json({message: "Post created."});
         } catch(error) {
             console.log(error);
@@ -490,14 +504,37 @@ var getFeed = async function(req, res) {
 
     // Step 2: Get feed. 
 
-    const getFeedQuery = `SELECT p.post_id, u.username, p.title, p.image_id, p.captions
+    const getFeedQuery = `
+    WITH posts AS (
+    SELECT p.post_id, u.username, p.title, p.image_id, p.captions
     FROM posts p JOIN users u ON p.author_id = u.user_id
     WHERE u.user_id IN (
         SELECT followed
         FROM friends
         WHERE ${userID} = follower
-    ) OR u.user_id = ${userID} 
-    ORDER BY p.post_id DESC;`;
+    ) OR u.user_id = ${userID} ),
+
+    numlikes AS (
+        SELECT post_id, COUNT(*) AS numlikes
+        FROM likes
+        GROUP BY post_id 
+    ),
+    liked AS (
+        SELECT post_id, true AS liked
+        FROM likes
+        WHERE liker_id = ${userID}
+    ),
+    commentList AS (
+        SELECT comments.post_id,  CONCAT('[', GROUP_CONCAT( CONCAT ( '[ "', comments.comment , '", "', users.username, '"]')), ']' )AS comments
+        FROM comments JOIN users ON comments.commenter_id = users.user_id
+        GROUP BY post_id
+    )
+
+    SELECT posts.post_id, posts.username, posts.title, posts.image_id, posts.captions, numlikes.numlikes, liked.liked, commentList.comments
+    FROM posts LEFT JOIN numlikes ON posts.post_id = numlikes.post_id
+    LEFT JOIN liked ON posts.post_id = liked.post_id
+    LEFT JOIN commentList ON commentList.post_id = liked.post_id
+    ORDER BY posts.post_id DESC;`;
 
     // console.log(userID)
     // console.log(getFeedQuery)
@@ -507,17 +544,23 @@ var getFeed = async function(req, res) {
         const results = await db.send_sql(getFeedQuery);
         // console.log(results)
         // console.log("SHOULD HAVE JUST PRINTED!!")
+        console.log(results)
         const returner = await Promise.all(results.map(async (inp) => ({
             "post_id": inp.post_id,
             "username": inp.username,
             "title": inp.title,
             "img_url": inp.image_id ? await getS3ImageURL("photos-pets-com", inp.image_id) : null,
-            "captions": inp.captions
+            "captions": inp.captions,
+            "numlikes": inp.numlikes,
+            "liked": (inp.liked == true),
+            "comments": inp.comments ? JSON.parse(inp.comments?.replace(/""/g, '"')) : null,
+
+
         })));
         // console.log(returner)
         return res.status(200).json({results: returner});
     } catch(error) {
-        // console.log(error)
+         console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
     

@@ -9,6 +9,10 @@ var addLike = async function(req, res) {
     const username = req.params.username
     const user_id = req.session.user_id;
 
+    console.log("LIKEEE ... " + username + "  " + user_id)
+    console.log(helper.isLoggedIn(req, username), post, user_id)
+
+
     if (!helper.isLoggedIn(req, username) || post==null || user_id == null) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
@@ -101,8 +105,8 @@ var addComment = async function(req, res) {
       
         const getId = await db.send_sql(`SELECT comment_id FROM comments WHERE post_id = ${post} AND commenter_id = ${user_id} AND comment = '${comment}'`)
         const matches = comment.match(regex)
-        matches.map(async match => {
-            const q = `INSERT INTO hashtags (hashtag, post_id, comment_id) VALUES ('${match}', ${post}, ${getId[0].comment_id}) `
+        matches?.map(async match => {
+            const q = `INSERT INTO hashtags (hashtag, post_id, comment_id, follower_id) VALUES ('${match}', ${post}, ${getId[0].comment_id}, ${user_id}) `
 
             await db.send_sql( q)  
              })

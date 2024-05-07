@@ -39,6 +39,12 @@ const consumer = kafka.consumer({
 });
 
 const cPost = async(id, title, captions) => {
+    if(title){
+        title = title.replace(/'/g, "''")
+    }
+    if(captions){
+        captions = captions.replace(/'/g, "''")
+    }
     var insertPostQuery =  `
     INSERT INTO posts (author_id, title, captions) 
     VALUES (${id}, '${title}', '${captions}');

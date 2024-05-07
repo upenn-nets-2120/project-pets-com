@@ -15,6 +15,9 @@ export default function Home() {
     img_url: string;
     captions: string;
     username: string | undefined;
+    numlikes: number | undefined;
+    liked: boolean;
+    comments: any;
   }
 
   const { username } = useParams();
@@ -46,6 +49,7 @@ export default function Home() {
         navigate("/");
       }
       if (feedResponse.status == 200) {
+        console.log(feedResponse.data.results);
         setFeed(feedResponse.data.results);
       }
     } catch (error) {
@@ -109,6 +113,9 @@ export default function Home() {
               image={feed.img_url}
               post_id={feed.post_id}
               username={username}
+              numlikes={feed.numlikes}
+              liked={feed.liked}
+              comments={feed.comments}
             />
           ))}
       </div>
