@@ -122,12 +122,13 @@ var postRegister = async function(req, res) {
             const result = await db.send_sql(userIDQuery);
             req.session.user_id = result[0].user_id; 
             req.session.username = usernameToCreate; 
-            const TwitQuery = `INSERT INTO friends VALUES 14, ${result[0].user_id} `
-            const FedQuery = `INSERT INTO friends VALUES 15, ${result[0].user_id} `
+            const TwitQuery = `INSERT INTO friends VALUES(14, ${result[0].user_id});`
+            const FedQuery = `INSERT INTO friends VALUES(15, ${result[0].user_id});`
             await db.insert_items(TwitQuery);
             await db.insert_items(FedQuery);
             return res.status(200).json({ username: usernameToCreate });
         } catch(error) {
+            console.log(error)
             return res.status(500).json({error: 'Error querying database.', error});
         }
     });
@@ -257,10 +258,8 @@ var getFriends = async function(req, res) {
     const getFriendsQuery =  `SELECT DISTINCT users.user_id, users.username, users.firstName, users.lastName FROM users JOIN friends ON users.user_id = friends.followed WHERE friends.follower = '${user_id}';`
     try {
         const results = await db.send_sql(getFriendsQuery);
-        console.log(results)
         return res.status(200).json({results: results});
     } catch(error) {
-        console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
 }
@@ -426,7 +425,7 @@ var createPost = async function(req, res) {
         console.log("Above try!")
     
         try {
-             kafka.sendMessage (username, "g23", userID, captions, 'text/html');
+            //kafka.sendMessage (username, "g23", userID, captions, 'text/html');
 
             if(!image && !captions){
                 const insertPostQuery =  `
@@ -552,6 +551,128 @@ var getMovie = async function(req, res) {
     res.status(200).json({message: result});
 }
 
+var get_chats = async function (req,res) {
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    const userID = req.session.user_id;
+    try {
+        const resp = await db.send_sql(`SELECT DISTINCT chats.chat_id, chats.chat_name FROM chats JOIN chatters ON chats.chat_id=chatters.chat_id WHERE chatters.user_id=${userID};`)
+        if (resp.length == 0) {
+            return res.status(200).json({results: []});
+        }
+        return res.status(200).json({results: resp});
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+var get_invites = async function (req,res) {
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    const userID = req.session.user_id;
+    try {
+        const resp = await db.send_sql(`SELECT DISTINCT chats.chat_id, chats.chat_name, invites.inviter_id FROM chats JOIN invites ON chats.chat_id=invites.chat_id WHERE invites.user_id=${userID};`)
+        const returner = resp.map((inp) => ({
+            "chat_id": inp.chat_id,
+            "chat_name": inp.chat_name,
+            "inviter_id": inp.inviter_id
+        }));
+        return res.status(200).json({results: returner});
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+var get_messages = async function (req,res) {
+    let username = req.params.username;
+    if (username == null || req.body.chat_id == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    const userID = req.session.user_id;
+    const chatID = req.body.chat_id;
+    try {
+        const resp = await db.send_sql(`SELECT users.username, timestamp, message FROM messages JOIN users ON messages.author_id = users.user_id WHERE messages.chat_id=${chatID};`)
+        const returner = resp.map((inp) => ({
+            "sender": inp.username,
+            "message": inp.message,
+            "timestamp": inp.timestamp
+        }));
+        if (returner.length == 0) {
+            return res.status(200).json({results: []});
+        }
+        return res.status(200).json({results: returner});
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+var chat_create = async function (req,res) {
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    const chatName = req.body.chat_name;
+    if (chatName == null || !helper.isOK(chatName) || chatName.trim().length == 0) {
+        return res.status(400).json({error: 'Missing or incorrect fields'});
+    }
+    try {
+        const resp = await db.send_sql(`INSERT INTO chats(chat_name) VALUES ('${chatName}');`)
+        const resp2 = await db.send_sql(`SELECT LAST_INSERT_ID();`)
+        console.log(resp2)
+        return res.status(200).json({chat_id : resp2[0]['LAST_INSERT_ID()']})
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+var chat_handle_invite = async function (req,res) {
+    let username = req.params.username;
+    if (username == null || req.body.accept == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    const userID = req.session.user_id;
+    const chatID = req.body.chat_id;
+    const inviterID = req.body.inviter_id;
+    console.log(req.body)
+    if (chatID == null || inviterID == null) {
+        return res.status(400).json({error : 'Missing fields.'});
+    }
+    try {
+        const resp = await db.send_sql(`SELECT COUNT (DISTINCT chat_id) FROM chatters WHERE chat_id=${chatID}`)
+        if (req.body.accept == true) { //USER ACCEPTS INVITE
+            // CHECK IF CHAT HAS BEEN POPULATED
+            if (resp[0]['COUNT (DISTINCT chat_id)'] == 0) {
+                //IF CHAT HAS NOT BEEN CREATED, ALSO ADD INVITER
+                const addInviter = await db.insert_items(`INSERT INTO chatters (chat_id, user_id) VALUES(${chatID}, ${inviterID});`)
+            } 
+            //ADD USER TO CHAT_ID
+            const addUser = await db.insert_items(`INSERT INTO chatters (chat_id, user_id) VALUES(${chatID}, ${userID})`)
+            //DISCARD invite
+            await db.insert_items(`DELETE FROM invites WHERE inviter_id=${inviterID} AND chat_id=${chatID} AND user_id=${userID};`)
+        } else {
+            //DISCARD invite
+            await db.insert_items(`DELETE FROM invites WHERE inviter_id=${inviterID} AND chat_id=${chatID} AND user_id=${userID};`)
+            // CHECK IF CHAT HAS BEEN POPULATED
+            if (resp[0]['COUNT (DISTINCT chat_id)'] == 0) {
+                //DELETE chat
+                const deletedrows = await db.insert_items(`DELETE FROM chats WHERE chat_id=${chatID};`)
+            }
+        }
+        return res.status(200).json({message: 'Invite handled'})
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
 var chat_leave = async function (req,res) {
     //STEP 1: Make sure user is logged in
     let username = req.params.username;
@@ -563,58 +684,49 @@ var chat_leave = async function (req,res) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
     const chatID = req.body.chat_id;
-    if (!helper.isOK(chatID)) {
-        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
-    }
     const userID = req.session.user_id;
     try {
         //STEP 3: Check if chat_id exists
         //STEP 4: Remove user_id from chat_id, if possible
-        const deletedrows = await db.insert_items(`DELETE FROM Chats WHERE (user_id == ${userID} AND chat_id == ${chatID});`);
-        if (deletedrows == 0) {
-            return res.status(201).json({message: "user not found in chat"});
-        }
+        const deletedrows = await db.insert_items(`DELETE FROM chatters WHERE (chat_id=${chatID} AND user_id=${userID});`);
+        const resp = await db.send_sql(`SELECT COUNT (DISTINCT chat_id) FROM chatters WHERE chat_id=${chatID}`);
+        if (resp[0]['COUNT (DISTINCT chat_id)'] == 0) {
+            //IF CHAT IS NOW EMPTY, DELETE ALL INVITES, MESSAGES, CHATS
+            const deleteinvites = await db.insert_items(`DELETE FROM invites WHERE chat_id=${chatID};`)
+            const deletemessages = await db.insert_items(`DELETE FROM messages WHERE chat_id=${chatID};`)
+            const deletechat = await db.insert_items(`DELETE FROM chats WHERE chat_id=${chatID};`)
+        } 
         return res.status(200).json({message: "User Deleted."});
     } catch (error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.', error});
     }
 }
 
-
-//POST /:username/:chat_id/add
-var chat_add = async function (req,res) {
-    //STEP 1: Make sure user is logged in
+var chat_invite = async function (req,res) {
     let username = req.params.username;
     if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
     //STEP 2: Check for chat_id input
-    if (!req.body || !req.body.chat_id) {
+    if (!req.body) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
+    const userID = req.session.user_id; //you are the inviter
+    const personID = req.body.person_id; //person being invited
     const chatID = req.body.chat_id;
-    if (!helper.isOK(chatID)) {
-        return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
+    console.log(req.body)
+    if (chatID == null || personID == null || userID == null) {
+        return res.status(400).json({error : 'Missing fields.'});
     }
-    const userID = req.session.user_id;
     try {
-        //STEP 3: Check if chat_id exists
-        const chats = await db.send_sql(`SELECT DISTINCT(chat_name) FROM Chats WHERE chat_id == ${chatID};`);
-        const chatName = chats[0]["DISTINCT(chat_name)"];
-        if (length(chatName) == 0) {
-            return res.status(201).json({message: "chat does not exist"});
-        }
-        //STEP 4: Add user_id to chat_id, if possible
-        const addedPeople = await db.insert_items(`INSERT IGNORE INTO Chats VALUES (${chatID}, ${chatName}, ${userID});`);
-        if (addedPeople == 0) {
-            return res.status(201).json({message: "user already exists in chat"});
-        }
-        return res.status(200).json({message: "User Added."});
+        const invitedPeople = await db.insert_items(`INSERT IGNORE INTO invites (chat_id, user_id, inviter_id) VALUES (${chatID}, ${personID}, ${userID});`);
+        return res.status(200).json({message:"ok"})
     } catch (error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.', error});
     }
 }
-
 
 //POST /:username/:chat_id/message
 var chat_message = async function (req,res) {
@@ -631,22 +743,16 @@ var chat_message = async function (req,res) {
     const timestamp = req.body.timestamp;
     const message = req.body.message;
 
-    if (!helper.isOK(chatID) || !helper.isOK(message)) {
+    if (!helper.isOK(message)) {
         return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
     }
     const userID = req.session.user_id;
     try {
-        //STEP 3: Check if chat_id exists
-        const chats = await db.send_sql(`SELECT DISTINCT(chat_name) FROM Chats WHERE chat_id == ${chatID};`);
-        const chatName = chats[0]["DISTINCT(chat_name)"];
-        if (length(chatName) == 0) {
-            return res.status(201).json({message: "chat does not exist"});
-        }
-        //STEP 4: Add user_id's message to chat_id, if possible
-        const addedMessage = await db.insert_items(`INSERT INTO Messages VALUES (${chatID}, ${userID}, ${timestamp}, ${message});`);
+        //STEP 43 Add user_id's message to chat_id, if possible
+        const addedMessage = await db.insert_items(`INSERT INTO messages (chat_id, author_id, timestamp, message) VALUES (${chatID}, ${userID}, ${timestamp}, '${message}');`);
         return res.status(200).json({message: "Message Added."});
-
     } catch (error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.', error});
     }
 }
@@ -767,8 +873,13 @@ var routes = {
     get_movie: getMovie,
     create_post: createPost,
     get_feed: getFeed,
+    get_chats: get_chats,
+    get_invites: get_invites,
+    get_messages: get_messages,
+    chat_create: chat_create,
+    chat_handle_invite: chat_handle_invite,
     chat_leave: chat_leave,
-    chat_add: chat_add,
+    chat_invite: chat_invite,
     chat_message: chat_message,
     follow: follow, 
     unfollow: unfollow,

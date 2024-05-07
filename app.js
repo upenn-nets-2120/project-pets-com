@@ -1,5 +1,7 @@
 const express = require('express');
+const expressWs = require('express-ws')
 const app = express();
+expressWs(app)
 const port = 8080;
 const registry = require('./routes/register_routes.js');
 const kafka = require('./routes/kafka_routes.js')
@@ -17,7 +19,7 @@ app.use(session({
 
 
 registry.register_routes(app);
-kafka.runConsumer().catch(console.error);
+//kafka.runConsumer().catch(console.error);
 
 
 app.listen(port, () => {
