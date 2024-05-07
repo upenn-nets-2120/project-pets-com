@@ -3,7 +3,7 @@ const multer = require('multer');
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage });
 const otherRoutes= require('./comment_like_routes.js')
-//const faceRoutes= require('./face_api_routes.js')
+const faceRoutes= require('./face_api_routes.js')
 
 
 module.exports = {
@@ -35,5 +35,8 @@ function register_routes(app) {
     app.get('/topHashtags', otherRoutes.topHashtags)
     //app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
 
+    app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
+    app.post('/:username/linkActor', faceRoutes.linkActor); 
+    app.get('/:username/getLinks', faceRoutes.getLinks); 
   }
   

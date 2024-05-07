@@ -113,9 +113,15 @@ async function create_tables(db) {
     FOREIGN KEY (author_id) REFERENCES users(user_id)\
     );')
 
-    var q10 = db.send_sql("LOAD DATA INFILE 'models/names.csv' INTO TABLE actors FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS (actor_name, birthYear, deathYear, actor_id, nconst_short);");
+    //var q11 = db.send_sql("ALTER TABLE users DROP FOREIGN KEY users_ibfk_1;")
 
-  return await Promise.all([q10, q2, q3, q4, q5, q6, q7, q8, q9]);
+    var q10 = db.create_tables('CREATE TABLE IF NOT EXISTS userActorLink ( \
+      username VARCHAR(255) NOT NULL, \
+      actor_id VARCHAR(10), \
+      FOREIGN KEY (actor_id) REFERENCES actors(actor_id) \
+      );')
+
+  return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9, q10]);
 }
 
 // Database connection setup
