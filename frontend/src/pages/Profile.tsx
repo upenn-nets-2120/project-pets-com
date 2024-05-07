@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import config from "../../config.json";
@@ -16,12 +16,12 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [file, setFile] = useState(null);
   const [fileURL, setFileURL] = useState("");
+
   //const [email, setEmail] = useState("");
   //const [affiliation, setAffiliation] = useState("");
   //const [birthday, setBirthday] = useState("");
   //const [firstName, setFirstName] = useState("");
   //const [lastName, setLastName] = useState("");
-
 
   const friends = () => {
     navigate("/" + username + "/friends");
@@ -33,7 +33,7 @@ export default function Profile() {
 
   const feed = () => {
     navigate("/" + username + "/home");
-  }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -41,7 +41,6 @@ export default function Profile() {
     setFileURL(URL.createObjectURL(e.target.files[0]));
     //console.log(file);
   };
-
 
   // TODO: handleSubmit
   const handleSubmit = async (e) => {
@@ -58,35 +57,38 @@ export default function Profile() {
     try {
       const formData = new FormData();
       if (file) {
-        formData.append('image', file); 
+        formData.append("image", file);
       }
 
-      const response = await axios.post(`${rootURL}/${username}/updateProfile`, {
-        password
-      });
-
-      console.log("Authenticated")
-    
-      const similarActors = await axios.post(
-        `${config.serverRootURL}/${username}/getActors`,
-        formData,
-        { 
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'multipart/form-data' 
-          }
+      const response = await axios.post(
+        `${rootURL}/${username}/updateProfile`,
+        {
+          password,
         }
       );
 
-      //console.log(similarActors); 
+      console.log("Authenticated");
+
+      const similarActors = await axios.post(
+        `${config.serverRootURL}/${username}/getActors`,
+        formData,
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      //console.log(similarActors);
 
       if (response.status === 200) {
-        alert("Profile Change Successful")
+        alert("Profile Change Successful");
         setFile(null);
         setFileURL("");
         navigate("/" + username + "/home");
       } else {
-        console.log(response.status)
+        console.log(response.status);
         alert("Registration failed.");
       }
     } catch (error) {
@@ -132,68 +134,68 @@ export default function Profile() {
           </button>
         </div>
       </div>
-    <div className="w-screen h-screen flex items-center justify-center">
-      <form onSubmit={handleSubmit}>
-        <div className="rounded-md bg-slate-50 p-6 space-y-2 w-full">
-          <div className="font-bold flex w-full justify-center text-2xl mb-4">
-            Update Profile
-          </div>
-          <div className="flex space-x-4 items-center justify-between">
-            <label htmlFor="username" className="font-semibold">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              className="outline-none bg-white rounded-md border border-slate-100 p-2"
-              value={username}
-            />
-          </div>
-          <div className="flex space-x-4 items-center justify-between">
-            <label htmlFor="content" className="font-semibold">
-              Photo
-            </label>
-            <input type="file" accept="image/*" onChange={handleFileChange} />
-          </div>
-          <div className="flex space-x-4 items-center justify-between">
-            <label htmlFor="password" className="font-semibold">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="outline-none bg-white rounded-md border border-slate-100 p-2"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <div className="flex space-x-4 items-center justify-between">
-            <label htmlFor="confirmPassword" className="font-semibold">
-              Confirm Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              className="outline-none bg-white rounded-md border border-slate-100 p-2"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
-          <div className="w-full flex justify-center">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
-              }}
-              type="submit"
-              className="px-4 py-2 rounded-md bg-indigo-500 outline-none font-bold text-white"
-            >
+      <div className="w-screen h-screen flex items-center justify-center">
+        <form onSubmit={handleSubmit}>
+          <div className="rounded-md bg-slate-50 p-6 space-y-2 w-full">
+            <div className="font-bold flex w-full justify-center text-2xl mb-4">
               Update Profile
-            </button>
+            </div>
+            <div className="flex space-x-4 items-center justify-between">
+              <label htmlFor="username" className="font-semibold">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                className="outline-none bg-white rounded-md border border-slate-100 p-2"
+                value={username}
+              />
+            </div>
+            <div className="flex space-x-4 items-center justify-between">
+              <label htmlFor="content" className="font-semibold">
+                Photo
+              </label>
+              <input type="file" accept="image/*" onChange={handleFileChange} />
+            </div>
+            <div className="flex space-x-4 items-center justify-between">
+              <label htmlFor="password" className="font-semibold">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="outline-none bg-white rounded-md border border-slate-100 p-2"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex space-x-4 items-center justify-between">
+              <label htmlFor="confirmPassword" className="font-semibold">
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                className="outline-none bg-white rounded-md border border-slate-100 p-2"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <div className="w-full flex justify-center">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }}
+                type="submit"
+                className="px-4 py-2 rounded-md bg-indigo-500 outline-none font-bold text-white"
+              >
+                Update Profile
+              </button>
+            </div>
           </div>
-        </div>
-      </form>
-    </div>
+        </form>
+      </div>
     </div>
   );
 }

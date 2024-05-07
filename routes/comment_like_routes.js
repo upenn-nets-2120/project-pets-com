@@ -137,11 +137,28 @@ var addComment = async function(req, res) {
             }
         }
 
+var topHashtags = async function(req, res){
+    try {
+        const results = await db.send_sql(`
+        SELECT hashtag
+        FROM hashtags
+        GROUP BY hashtag
+        ORDER BY COUNT(*) DESC
+        LIMIT 10;
+        `)
+        return res.status(200).json({results: results})
+    } catch(error){
+        console.log(error)
+        return res.status(500).json({error: 'Error querying database'})
+    }
+}
+
 var otherRoutes = {
     addLike,
     getLike,
     unLike,
     addComment,
-    getComments
+    getComments,
+    topHashtags
 }
 module.exports = otherRoutes
