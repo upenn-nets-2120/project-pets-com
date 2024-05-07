@@ -3,7 +3,7 @@ const multer = require('multer');
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage });
 const otherRoutes= require('./comment_like_routes.js')
-//const faceRoutes= require('./face_api_routes.js')
+const faceRoutes= require('./face_api_routes.js')
 
 
 module.exports = {
