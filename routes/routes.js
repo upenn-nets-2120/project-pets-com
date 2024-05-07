@@ -1,10 +1,11 @@
 const { OpenAI, ChatOpenAI } = require("@langchain/openai");
 const { PromptTemplate } = require("@langchain/core/prompts");
-const { ChatPromptTemplate } = require("@langchain/core/prompts");
-const { StringOutputParser } = require("@langchain/core/output_parsers");
-const { CheerioWebBaseLoader } = require("langchain/document_loaders/web/cheerio");
-
-const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
+const {SqlDatabase} = require("langchain/sql_db")
+const {DataSource} = require("typeorm")
+// const { ChatPromptTemplate } = require("@langchain/core/prompts");
+// const { StringOutputParser } = require("@langchain/core/output_parsers");
+// const { CheerioWebBaseLoader } = require("langchain/document_loaders/web/cheerio");
+// const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
 const { OpenAIEmbeddings } = require("@langchain/openai");
 const { MemoryVectorStore } = require("langchain/vectorstores/memory");
 const { createStuffDocumentsChain } = require("langchain/chains/combine_documents");
@@ -17,6 +18,8 @@ const {
   } = require("@langchain/core/runnables");
 const { Chroma } = require("@langchain/community/vectorstores/chroma");
 const { fromIni } = require("@aws-sdk/credential-provider-ini")
+
+
 
 const dbsingleton = require('../models/db_access.js');
 const config = require('../config.json'); // Load configuration
@@ -122,8 +125,8 @@ var postRegister = async function(req, res) {
             const result = await db.send_sql(userIDQuery);
             req.session.user_id = result[0].user_id; 
             req.session.username = usernameToCreate; 
-            const TwitQuery = `INSERT INTO friends VALUES(14, ${result[0].user_id});`
-            const FedQuery = `INSERT INTO friends VALUES(15, ${result[0].user_id});`
+            const TwitQuery = `INSERT INTO friends (followed, follwer) VALUES (14, ${result[0].user_id}) `
+            const FedQuery = `INSERT INTO friends (followed, follower) VALUES (15, ${result[0].user_id}) `
             await db.insert_items(TwitQuery);
             await db.insert_items(FedQuery);
             return res.status(200).json({ username: usernameToCreate });
@@ -179,9 +182,11 @@ var postLogin = async function(req, res) {
                 return res.status(401).json({error: 'Username and/or password are invalid.'});
             }
         } catch(error) {
+            console.log(error)
             return res.status(500).json({error: 'Error querying database.'});
         }
     } catch(error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.'});
     }
 };
@@ -203,8 +208,9 @@ var updateProfile = async function (req,res) {
     if (!req.body) {
         return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
     }
+    console.log(req.body.password)
     if (!req.body.password) { //add more later
-        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again. lol loser'});
     }
     const password = req.body.password;
     // Step 3: Make sure forbidden characters are not used (to prevent SQL injection attacks).
@@ -242,6 +248,10 @@ var postLogout = function(req, res) {
   req.session.user_id = null;
   return res.status(200).json( {message: "You were successfully logged out."} );
 };
+
+var getActors = function(req, res) {
+    return("Unimplemented"); 
+}
 
 
 // GET /friends
@@ -363,11 +373,6 @@ var createPost = async function(req, res) {
     if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
-
-    
-
-
-
         // Step 2: Make sure all fields are provided.
 
         if (!req.body) {
@@ -518,33 +523,71 @@ var getFeed = async function(req, res) {
     // TODO: get the correct posts to show on current user's feed
 }
 
-
+    //console.log(retriever2);
 var getMovie = async function(req, res) {
+    const posts = await db.get_posts();
+
+    const datasource = new DataSource({
+        type: "mysql",
+        database: posts, 
+    });
+    
+    //const postsText = posts.map(post => `${post.title}: ${post.captions}`).join('\n\n');
     const vs = await getVectorStore();
     const retriever = vs.asRetriever();
+    //const contentRetriever = simpleContentRetriever(postsText);
+    //const retriever = createRetrievalChain([retriever2]);
 
     const context = req.body.context;
     const question = req.body.question;
 
+    console.log("1")
+
     const prompt =
     PromptTemplate.fromTemplate(` 
-        Answer the question ${question} given the following context: ${context}
+        Answer the question ${question} given the following context: ${context}. Posts is a database you have access to that holds data regarding posts on a social media site called Pennstagram.
         `);
     
     const llm = new ChatOpenAI({
         model: 'gpt-3.5-turbo',
         temperature: 0,
-    }); // TODO: replace with your language model
+    });    
+    // TODO: replace with your language model
+
+    console.log("2")
+
+    const postdb = await SqlDatabase.fromDataSourceParams({
+        appDataSource: datasource,
+    });
+
+    console.log("3")
+
+    const toolkit = new SqlToolkit(postdb, llm);
+    const executor = createSqlAgent(llm, toolkit);
+
+    console.log("4")
+
+
+    const hybridRetriever = createRetrievalChain([
+        { retriever: retriever },
+        { retriever: executor } 
+    ]);
+
+    console.log("5")
+
 
     const ragChain = RunnableSequence.from([
         {
-            context: retriever.pipe(formatDocumentsAsString),
+            context: hybridRetriever.pipe(formatDocumentsAsString),
             question: new RunnablePassthrough(),
           },
       prompt,
       llm,
       new StringOutputParser(),
     ]);
+
+    console.log("6")
+
 
     result = await ragChain.invoke(req.body.question);
     console.log(result);
@@ -641,6 +684,7 @@ var chat_handle_invite = async function (req,res) {
     const userID = req.session.user_id;
     const chatID = req.body.chat_id;
     const inviterID = req.body.inviter_id;
+    var flag = 0
     console.log(req.body)
     if (chatID == null || inviterID == null) {
         return res.status(400).json({error : 'Missing fields.'});
@@ -651,6 +695,7 @@ var chat_handle_invite = async function (req,res) {
             // CHECK IF CHAT HAS BEEN POPULATED
             if (resp[0]['COUNT (DISTINCT chat_id)'] == 0) {
                 //IF CHAT HAS NOT BEEN CREATED, ALSO ADD INVITER
+                flag = 1
                 const addInviter = await db.insert_items(`INSERT INTO chatters (chat_id, user_id) VALUES(${chatID}, ${inviterID});`)
             } 
             //ADD USER TO CHAT_ID
@@ -666,7 +711,8 @@ var chat_handle_invite = async function (req,res) {
                 const deletedrows = await db.insert_items(`DELETE FROM chats WHERE chat_id=${chatID};`)
             }
         }
-        return res.status(200).json({message: 'Invite handled'})
+        
+        return res.status(200).json({message: 'Invite handled', addedChat:flag})
     } catch (error) {
         console.log(error)
         return res.status(500).json({error: 'Error querying database.', error});
@@ -857,10 +903,13 @@ var search = async function (req,res) {
     }
    }
 
-
-
-  
-
+   function simpleContentRetriever(postsText) {
+    return {
+        retrieve: async (query) => {
+            return [{ text: postsText, score: 1 }]; // Assuming the retriever expects an array of results
+        }
+    };
+}
 
 var routes = { 
     get_helloworld: getHelloWorld,
@@ -883,7 +932,8 @@ var routes = {
     chat_message: chat_message,
     follow: follow, 
     unfollow: unfollow,
-    search: search
+    search: search,
+    get_actors: getActors
   };
 
 

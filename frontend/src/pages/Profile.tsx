@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import config from "../../config.json";
-import PostComponent from "../components/PostComponent";
-import CreatePostComponent from "../components/CreatePostComponent";
+//import PostComponent from "../components/PostComponent";
+//import CreatePostComponent from "../components/CreatePostComponent";
 import { useNavigate } from "react-router-dom";
 axios.defaults.withCredentials = true;
 
@@ -14,11 +14,13 @@ export default function Profile() {
   const { username } = useParams();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [affiliation, setAffiliation] = useState("");
-  const [birthday, setBirthday] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [file, setFile] = useState(null);
+  const [fileURL, setFileURL] = useState("");
+  //const [email, setEmail] = useState("");
+  //const [affiliation, setAffiliation] = useState("");
+  //const [birthday, setBirthday] = useState("");
+  //const [firstName, setFirstName] = useState("");
+  //const [lastName, setLastName] = useState("");
 
 
   const friends = () => {
@@ -33,9 +35,18 @@ export default function Profile() {
     navigate("/" + username + "/home");
   }
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFile(file);
+    setFileURL(URL.createObjectURL(e.target.files[0]));
+    //console.log(file);
+  };
+
+
   // TODO: handleSubmit
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
     // TODO: make sure passwords match
+    e.preventDefault();
 
     if (password !== confirmPassword) {
       console.log("Passwords don't match!");
@@ -45,12 +56,34 @@ export default function Profile() {
 
     // TODO: send registration request to backend
     try {
+      const formData = new FormData();
+      if (file) {
+        formData.append('image', file); 
+      }
+
       const response = await axios.post(`${rootURL}/${username}/updateProfile`, {
-        password,
+        password
       });
+
+      console.log("Authenticated")
+    
+      const similarActors = await axios.post(
+        `${config.serverRootURL}/${username}/getActors`,
+        formData,
+        { 
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'multipart/form-data' 
+          }
+        }
+      );
+
+      //console.log(similarActors); 
 
       if (response.status === 200) {
         alert("Profile Change Successful")
+        setFile(null);
+        setFileURL("");
         navigate("/" + username + "/home");
       } else {
         console.log(response.status)
@@ -117,6 +150,12 @@ export default function Profile() {
             />
           </div>
           <div className="flex space-x-4 items-center justify-between">
+            <label htmlFor="content" className="font-semibold">
+              Photo
+            </label>
+            <input type="file" accept="image/*" onChange={handleFileChange} />
+          </div>
+          <div className="flex space-x-4 items-center justify-between">
             <label htmlFor="password" className="font-semibold">
               Password
             </label>
@@ -144,7 +183,7 @@ export default function Profile() {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                handleSubmit();
+                handleSubmit(e);
               }}
               type="submit"
               className="px-4 py-2 rounded-md bg-indigo-500 outline-none font-bold text-white"

@@ -1,7 +1,10 @@
 const express = require('express');
 const { Kafka } = require('kafkajs');
 const dbsingleton = require('../models/db_access.js');
-
+const {  CompressionTypes, CompressionCodecs } = require('kafkajs')
+const SnappyCodec = require('kafkajs-snappy')
+ 
+CompressionCodecs[CompressionTypes.Snappy] = SnappyCodec
 const db = dbsingleton;
 
 const kafka = new Kafka({
@@ -12,6 +15,7 @@ const kafka = new Kafka({
 const producer = kafka.producer()
 
 const sendMessage = async(username, source_site, post_uuid_within_site, post_text, content_type) => {
+    console.log("SENDING MESSAGE!!");
     await producer.connect()
     await producer.send({
     topic: "FederatedPosts",
@@ -56,14 +60,19 @@ const runConsumer = async () => {
     await consumer.run({
         eachMessage: async({topic, partition, message}) => {
             console.log(message)
-            let m = JSON.parse(message.value)
+            let m = {}
+            try{
+            m = JSON.parse(message.value)
+            } catch(error){
+                return;
+            }
             console.log(m)
             if(topic == "Twitter-Kafka"){
                 let mess = null
                 if(m.text){
                     mess = m.text
                 }
-                cPost(14, null, mess);
+                await cPost(14, null, mess);
                 
 
 
@@ -76,7 +85,7 @@ const runConsumer = async () => {
                 if(m.post_text){
                     mess = m.post_text
                 }
-                cPost(15, title, mess );
+                await cPost(15, title, mess );
             }
 
         }

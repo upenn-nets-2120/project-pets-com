@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef} from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +25,7 @@ interface Message {
   message: string;
   timestamp: number;
 }
-
+const x =new WebSocket(config.webSocketRootURL);
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
@@ -33,14 +33,25 @@ export default function ChatInterface() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [newChatName, setNewChatName] = useState<string>("");
   const [chatID, setChatID] = useState(-2);
-  const [chatName, setChatName] = useState<String>("Welcome to Pennstagram");
+  const [chatName, setChatName] = useState<string>("Welcome to Pennstagram");
   const [invite, setInvites] = useState<Chat[]>([]);
   const [friendsList, setFriendsList] = useState<Friend[]>([]);
   const [showInvitePopup, setShowInvitePopup] = useState(false); // State to manage popup visibility
   const [showCreatePopup, setShowCreatePopup] = useState(false); // State to manage popup visibility
-
-
+  const socket = useRef(Object());
   const navigate = useNavigate();
+
+  useEffect(() => {
+    socket.current = new WebSocket(config.webSocketRootURL);
+    socket.current.onopen = () => console.log("ws opened");
+    socket.current.onclose = () => console.log("ws closed");
+
+    const wsCurrent = socket.current;
+
+    return () => {
+        wsCurrent.close();
+    };
+}, []);
 
   const feed = () => {
     navigate("/" + username + "/home");
@@ -79,33 +90,61 @@ const loadInvites = async () => {
 }
 
 useEffect(() => {
+  console.log("friend's list")
   loadFriendsList(); // Load friends list on component mount
 }, []);
 
 useEffect(() => {
+  console.log("chats")
   loadChats();
 }, []);
 
 useEffect(() => {
+  console.log("invites")
   loadInvites();
 },[]);
 
+//Open sockets after chats etc. have been loaded
+useEffect(() => {
+  console.log("sockets")
+if (!socket.current) return;
+socket.current.onopen =  () => {
+  console.log('WebSocket connection established.');
+  //send all of the users's chats
+  if (chats.length == 0) {
+    loadChats()
+  }
+  const message = {purpose: "init", chat_ids:chats.map(x=>(x.chat_id))} //return list of chats upon initialization
+  socket.current.send(JSON.stringify(message));
+}
 
-const MessageComponent = ({
-  sender,
-  message,
-}: {
-  sender: string;
-  message: string;
-}) => {
+socket.current.onmessage =  (event : any) => {
+  console.log(event.data)
+  const receivedEvent = JSON.parse(event.data);
+  if (receivedEvent.purpose == "Chat") {
+    console.log(messages)
+    setMessages([...messages,{sender: receivedEvent.sender, message: receivedEvent.message, timestamp:receivedEvent.timestamp}]);
+  } else if (receivedEvent.purpose == "Received Invite") {
+    console.log(invite)
+    setInvites([...invite,{chat_id: receivedEvent.chat_id, chat_name: receivedEvent.chat_name, inviter_id: receivedEvent.inviter_id}])
+  } else if (receivedEvent.purpose == "Add to Chat Special") {
+    console.log(chats)
+    setChats([...chats,{chat_id: receivedEvent.chat_id, chat_name: receivedEvent.chat_name, inviter_id: -1}])
+  }
+}
+
+socket.current.onerror = (event : any) => {
+  console.log(event)
+}
+})
+
+
+const MessageComponent = ({ sender, message }: { sender: string; message: string;}) => {
   return (
     <div className={`w-full flex ${(sender === "user" || sender === username) && "justify-end"}`}>
-      <div
-        className={`text-left max-w-[70%] p-3 rounded-md break-words ${
-          (sender === "chatbot" || sender !== username) ? "bg-blue-100" : "bg-slate-200"
-        }`}
-      >
-        {message + `\n${sender}`}
+      <div className={`text-left max-w-[70%] p-3 rounded-md break-words ${(sender === "chatbot" || sender !== username) ? "bg-blue-100" : "bg-slate-200"}`}>
+        <div className="text-sm">{message}</div>
+        <div className="text-xs text-gray-500">{sender}</div>
       </div>
     </div>
   );
@@ -185,12 +224,22 @@ const InviteSelector = ({
             }
           }
         );
+
         const inviteC = [...invite];
         const acceptedChat = inviteC.splice(index, 1);  //just remove
         const chatC = [...chats]
         chatC.push(acceptedChat[0]) // add to chats
         setInvites(inviteC);
         setChats(chatC);
+
+        const added = response.data.addedChat;
+        const message = {purpose: "Handle Accept Invite", chat_id:chat_id, chat_name:chat_name, inviter_id: inviter_id, chat_ids:[...chats].map(x=>(x.chat_id))}
+        socket.current.send(JSON.stringify(message));
+        if (added == 1) {
+          //The Special Case
+          const message = {purpose: "Handle Accept Invite Special", chat_id:chat_id, chat_name:chat_name, inviter_id: inviter_id, chat_ids:[...chats].map(x=>(x.chat_id))}
+          socket.current.send(JSON.stringify(message));
+        }
       } catch (error) {
         console.error("Error in chat_accept_invite:", error);
       } 
@@ -235,6 +284,8 @@ const InviteSelector = ({
         const chatC = [...chats];
         chatC.splice(index, 1);  //just remove
         setChats(chatC);
+        const message = {purpose: "Leave Chat", chat_id:chat_id, chat_ids:[...chats].splice(index,1)} //return list of chats upon initialization
+        socket.current.send(JSON.stringify(message));
       } catch (error) {
         console.error("Error in chat_leave:", error);
       } 
@@ -307,8 +358,10 @@ const InviteSelector = ({
   }
 
   //helper function
-  const chat_invite = async (_chat_id: number, _other_id : number) => {
+  const chat_invite = async (_chat_id: number, _chat_name: string, _other_id : number) => {
     try {
+      const message = {purpose: "Send Invite", chat_id:_chat_id, chat_name:_chat_name, person_id: _other_id, chat_ids:[...chats].map(x=>(x.chat_id))}
+      socket.current.send(JSON.stringify(message));
       const response = await axios.post(
         `${config.serverRootURL}/${username}/chat_invite`,
         {chat_id: _chat_id,
@@ -368,16 +421,17 @@ const InviteSelector = ({
     }
   }
 
+
   const sendMessage = async (_chat_id : number) => {
     if (username == null) {
       console.log("username cannot be null");
       return;
     }
-    console.log(_chat_id)
     if (_chat_id >= 0) { //Human
       try {
         const now = Date.now()
-        setMessages([...messages, { sender: username, message: input, timestamp: now}]);
+        const message = {purpose: "Chat", chat_id:_chat_id, sender: username, message: input, timestamp: now, chat_ids:[...chats].map(x=>(x.chat_id))}
+        socket.current.send(JSON.stringify(message));
         const response = await axios.post(`//localhost:8080/${username}/chat_message`, {
           chat_id: _chat_id,
           message: input,
@@ -517,7 +571,7 @@ const InviteSelector = ({
             {friendsList.map((friend, index) => (
               <div key={index} className="flex items-center space-x-2">
                 <InviteSelector chat_id={chatID} friend_id={friend.user_id} friend_username={friend.username} friend_firstName={friend.firstName} friend_lastName={friend.lastName} callback={() => {
-                  chat_invite(chatID, friend.user_id)}
+                  chat_invite(chatID, chatName, friend.user_id)}
                   }></InviteSelector>
               </div>
             ))}
@@ -552,7 +606,7 @@ const InviteSelector = ({
                 <InviteSelector chat_id={0} friend_id={friend.user_id} friend_username={friend.username} friend_firstName={friend.firstName} friend_lastName={friend.lastName} 
                 callback={async () => {
                   const _chat_id = await chat_create();
-                  chat_invite(_chat_id,friend.user_id);
+                  chat_invite(_chat_id, newChatName, friend.user_id);
                 }}></InviteSelector>
               </div>
             ))}

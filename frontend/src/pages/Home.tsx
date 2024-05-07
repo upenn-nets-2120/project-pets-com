@@ -10,10 +10,11 @@ axios.defaults.withCredentials = true;
 export default function Home() {
   interface Feed {
     post_id: number;
-    username: string;
+    user: string | undefined;
     title: string;
     img_url: string;
     captions: string;
+    username: string | undefined;
   }
 
   const { username } = useParams();
@@ -45,6 +46,7 @@ export default function Home() {
         navigate("/");
       }
       if (feedResponse.status == 200) {
+        console.log(feedResponse.data.results);
         setFeed(feedResponse.data.results);
       }
     } catch (error) {
@@ -90,7 +92,7 @@ export default function Home() {
             className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
             onClick={chat}
           >
-            AI Chat
+            Chat
           </button>
         </div>
       </div>
@@ -106,6 +108,8 @@ export default function Home() {
               user={feed.username}
               description={feed.captions}
               image={feed.img_url}
+              post_id={feed.post_id}
+              username={username}
             />
           ))}
       </div>
