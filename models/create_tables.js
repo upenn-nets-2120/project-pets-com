@@ -23,7 +23,10 @@ async function create_tables(db) {
   //TODO: Create actors table
   var q1 = db.create_tables('CREATE TABLE IF NOT EXISTS actors ( \
     actor_id VARCHAR(10) PRIMARY KEY, \
-    photo_id VARCHAR(225) \
+    actor_name VARCHAR(255), \
+    birthYear int, \
+    deathYear int, \
+    nconst_short VARCHAR(10) \
     );')
 
   // TODO: create users table
@@ -110,7 +113,9 @@ async function create_tables(db) {
     FOREIGN KEY (author_id) REFERENCES users(user_id)\
     );')
 
-  return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9]);
+    var q10 = db.send_sql("LOAD DATA INFILE 'models/names.csv' INTO TABLE actors FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS (actor_name, birthYear, deathYear, actor_id, nconst_short);");
+
+  return await Promise.all([q10, q2, q3, q4, q5, q6, q7, q8, q9]);
 }
 
 // Database connection setup

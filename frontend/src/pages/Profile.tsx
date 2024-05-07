@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import config from "../../config.json";
-import PostComponent from "../components/PostComponent";
-import CreatePostComponent from "../components/CreatePostComponent";
+//import PostComponent from "../components/PostComponent";
+//import CreatePostComponent from "../components/CreatePostComponent";
 import { useNavigate } from "react-router-dom";
 axios.defaults.withCredentials = true;
 
@@ -16,11 +16,11 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [file, setFile] = useState(null);
   const [fileURL, setFileURL] = useState("");
-  const [email, setEmail] = useState("");
-  const [affiliation, setAffiliation] = useState("");
-  const [birthday, setBirthday] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  //const [email, setEmail] = useState("");
+  //const [affiliation, setAffiliation] = useState("");
+  //const [birthday, setBirthday] = useState("");
+  //const [firstName, setFirstName] = useState("");
+  //const [lastName, setLastName] = useState("");
 
 
   const friends = () => {
@@ -65,6 +65,8 @@ export default function Profile() {
         password
       });
 
+      console.log("Authenticated")
+    
       const similarActors = await axios.post(
         `${config.serverRootURL}/${username}/getActors`,
         formData,
@@ -76,7 +78,7 @@ export default function Profile() {
         }
       );
 
-      console.log(similarActors); 
+      //console.log(similarActors); 
 
       if (response.status === 200) {
         alert("Profile Change Successful")
