@@ -65,7 +65,9 @@ export default function PostComponent({
         <span className="font-semibold"> @{user} </span>
         posted
       </div>
-      <div className="text-2xl font-bold">{title}</div>
+      {title && title != "null" && (
+        <div className="text-2xl font-bold">{title}</div>
+      )}
       {image && <img src={image} style={{ width: "300px", height: "200px" }} />}
       <div className="">{description}</div>
       <FavoriteBorderIcon

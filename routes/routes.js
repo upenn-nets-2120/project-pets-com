@@ -466,7 +466,7 @@ var createPost = async function(req, res) {
             if(captions){
                 const regex = /#(\w+)/g;
                 const matches = captions.match(regex)
-                matches.map(async match => {
+                matches?.map(async match => {
                     const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post}, ${userID}) `
         
                     await db.send_sql( q)  
