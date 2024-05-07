@@ -1,5 +1,5 @@
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import config from "../../config.json";
 
@@ -10,6 +10,9 @@ export default function PostComponent({
   image = "",
   post_id = -1,
   username = "",
+  numlikes = 0,
+  comments = [],
+  liked = false,
 }: {
   title: string;
   user: string | undefined;
@@ -17,29 +20,14 @@ export default function PostComponent({
   image: string;
   post_id: number;
   username: string | undefined;
+  numlikes: number | undefined;
+  liked: boolean;
+  comments: string[] | undefined;
+  commentUsers: string[] | undefined;
 }) {
   const rootURL = config.serverRootURL;
-  const [like, setLike] = useState(false);
-  const [comments, setComments] = useState([]);
+  const [like, setLike] = useState(liked);
   const [com, setCom] = useState("");
-
-  const fetchData = async () => {
-    // TODO: fetch posts data and set appropriate state variables
-    try {
-      const likeResponse = await axios.get(
-        `${rootURL}/${username}/${post_id}/getLike`
-      );
-      setLike(likeResponse.data.results);
-
-      const commentsResponse = await axios.get(
-        `${rootURL}/${username}/${post_id}/getComments`
-      );
-      setComments(commentsResponse.data.results.map((inp) => inp.comment));
-    } catch (error) {
-      console.error("Error fetching feed data:", error);
-      //navigate("/");
-    }
-  };
 
   const changeLike = async () => {
     try {
@@ -71,10 +59,6 @@ export default function PostComponent({
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   return (
     <div className="rounded-md bg-slate-50 w-full max-w-[1000px] space-y-2 p-3">
       <div className=" text-slate-800">
@@ -87,10 +71,11 @@ export default function PostComponent({
       <FavoriteBorderIcon
         className={`${like ? "text-red-500" : "text-black"}`}
         onClick={() => changeLike()}
-      />
+      />{" "}
+      {numlikes ? <span> {numlikes}</span> : <span>0</span>}
       <div> Comments: </div>
       {comments?.map((inp) => (
-        <div> {inp} </div>
+        <div> {inp[1] + ":  " + inp[0]} </div>
       ))}
       <form>
         <textarea
