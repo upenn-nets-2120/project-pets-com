@@ -15,6 +15,9 @@ export default function Home() {
     img_url: string;
     captions: string;
     username: string | undefined;
+    numlikes: number | undefined;
+    liked: boolean;
+    comments: any;
   }
 
   const { username } = useParams();
@@ -92,7 +95,7 @@ export default function Home() {
             className="px-2 py-2 rounded-md bg-gray-500 outline-none text-white"
             onClick={chat}
           >
-            Chat
+            AI Chat
           </button>
         </div>
       </div>
@@ -110,6 +113,10 @@ export default function Home() {
               image={feed.img_url}
               post_id={feed.post_id}
               username={username}
+              numlikes={feed.numlikes}
+              liked={feed.liked}
+              comments={feed.comments}
+              commentUsers={[]}
             />
           ))}
       </div>

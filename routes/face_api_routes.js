@@ -5,6 +5,9 @@ var path = require('path');
 const { ChromaClient } = require("chromadb");
 const tf = require('@tensorflow/tfjs-node');
 const faceapi = require('@vladmandic/face-api');
+const dbsingleton = require('../models/db_access.js');
+const db = dbsingleton;
+
 
 const uploadDirectory = pathPhoto.join(__dirname, '..', 'uploads');
 let optionsSSDMobileNet;
@@ -112,23 +115,73 @@ var getActors = async function(req, res) {
 
         // Assuming findTopKMatches is properly defined and ready to use
         const matches = await findTopKMatches(collection, search, 5);
-        let ids = [];
 
         matches.forEach((item, index) => {
             item.ids.forEach((id, idx) => {
             console.log(id)
+            });
         });
-        console.log(matches[0].ids)
 
-        
-    });
-    } catch (err) {
-        console.error('Error during the face model or collection setup:', err);
-        // Handle other actions like sending HTTP status if this is a server-side script
+        const matchesIds = matches[0].ids
+        const GetNconsts = matchesIds[0].map(item => item.replace('.jpg-1', ''));
+        const formattedIds = GetNconsts.map(id => `'${id}'`).join(',');
+
+        const getFromActorsQuery = `
+        SELECT actor_name, actor_id 
+        FROM actors 
+        WHERE actors.actor_id IN (${formattedIds})
+      `;
+       const results = await db.send_sql(getFromActorsQuery);
+
+       return res.status(200).json({ results: results });
+
+    } catch (error) {
+        return res.status(500).json({error: 'Error querying database.', error});
+    };
+}
+
+var linkActor = async function(req, res) {
+    const username = req.body.username;
+    const actorID = req.body.actor_id;
+
+    const findDuplicate = `SELECT * FROM userActorLink WHERE username = '${username}' AND actor_id = '${actorID}'`;
+    const insertUserLink = `INSERT INTO userActorLink (username, actor_id) VALUES ('${username}', '${actorID}')`;
+    try { 
+        const duplicate = await db.send_sql(findDuplicate);
+        if (duplicate.length > 0){
+            return res.status(201).json({success: "Actors already linked to user."});
+        }
+        await db.insert_items(insertUserLink);
+        console.log("Actors linked to user!") 
+        return res.status(201).json({success: "Actors linked to user."});
+    } catch (error) {
+        return res.status(500).json({error: 'Error querying database.', error});
+    }
+}
+
+var getLinks = async function(req, res) {
+    const username = req.params.username;
+    console.log(username)
+    const findLinks = `SELECT DISTINCT actors.actor_name
+    FROM userActorLink
+    JOIN actors ON userActorLink.actor_id = actors.actor_id
+    WHERE userActorLink.username = '${username}';`;
+
+    try { 
+        const links = await db.send_sql(findLinks);
+        console.log(links) 
+        if (links.length < 1) {
+            return res.status(404).json({error: 'No links here!'});
+        }
+        return res.status(200).json({results: links});
+    } catch (error) {
+        return res.status(500).json({error: 'Error querying database.', error});
     }
 }
 
 var faceRoutes = {
-    getActors
+    getActors, 
+    linkActor, 
+    getLinks
 }
 module.exports = faceRoutes;
