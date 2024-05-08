@@ -10,6 +10,7 @@ interface Friend {
   username : string;
   firstName: string;
   lastName : string;
+  timestamp : number | undefined;
 }
 
 
@@ -29,6 +30,7 @@ export default function Friends() {
     person_username,
     firstName,
     lastName,
+    time,
     add = true,
     remove = true,
   }: {
@@ -37,6 +39,7 @@ export default function Friends() {
     person_username : string;
     firstName: string;
     lastName : string;
+    time : number;
     add: boolean | undefined;
     remove: boolean | undefined;
   }) => {
@@ -85,11 +88,28 @@ export default function Friends() {
         console.error("Error in follow:", error);
       } 
     };
+
+    function formatTimestamp(timestamp : number) {
+      const secondsAgo = Math.floor((Date.now() - timestamp) / 1000);
+      if (secondsAgo < 60) {
+        return "Online";
+      } else if (secondsAgo < 3600) {
+        const minutes = Math.floor(secondsAgo / 60);
+        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+      } else if (secondsAgo < 86400) {
+        const hours = Math.floor(secondsAgo / 3600);
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      } else {
+        const days = Math.floor(secondsAgo / 86400);
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+      }
+    }
   
     return (
       <div className="rounded-md bg-slate-100 p-3 flex space-x-2 items-center flex-auto justify-between">
         <div className="font-semibold text-base">
-          {person_username}, {firstName} {lastName}
+          {person_username}, {firstName} {lastName} 
+          <span className="text-xs text-gray-500">{formatTimestamp(time)}</span>
         </div>
         <div className="flex space-x-2">
           {add && (
@@ -204,17 +224,32 @@ export default function Friends() {
           <div className="space-y-2">
             {
               // TODO: map each friend of the user to a FriendComponent
-              friends.map((friend, index) => {return (
+              friends.map((friend, index) => {if (friend.timestamp) {return (
                 <FriendComponent
-                index={index}
-                person_id={friend.user_id}
-                person_username={friend.username}
-                firstName={friend.firstName}
-                lastName={friend.lastName}
-                add={false}
-                remove={true}
+                  index={index}
+                  person_id={friend.user_id}
+                  person_username={friend.username}
+                  firstName={friend.firstName}
+                  lastName={friend.lastName}
+                  time={friend.timestamp}
+                  add={false}
+                  remove={true}
                 />
-              )})
+              )}
+            else {
+              return (
+                <FriendComponent
+                  index={index}
+                  person_id={friend.user_id}
+                  person_username={friend.username}
+                  firstName={friend.firstName}
+                  lastName={friend.lastName}
+                  time={1704067200000}
+                  add={false}
+                  remove={true}
+                />
+              )
+            }})
             }
           </div>
         </div>
@@ -223,17 +258,33 @@ export default function Friends() {
           <div className="space-y-2">
             {
               // TODO: map each recommendation of the user to a FriendComponent
-              recommendations.map((recommendation, index) => {return (
+              recommendations.map((recommendation, index) => {
+                if (recommendation.timestamp) {return (
                 <FriendComponent
                   index={index}
                   person_id={recommendation.user_id}
                   person_username={recommendation.username}
                   firstName={recommendation.firstName}
                   lastName={recommendation.lastName}
+                  time={recommendation.timestamp}
                   add={true}
                   remove={false}
                 />
-              )})
+              )}
+            else {
+              return (
+                <FriendComponent
+                  index={index}
+                  person_id={recommendation.user_id}
+                  person_username={recommendation.username}
+                  firstName={recommendation.firstName}
+                  lastName={recommendation.lastName}
+                  time={1704067200000}
+                  add={true}
+                  remove={false}
+                />
+              )
+            }})
             }
           </div>
         </div>

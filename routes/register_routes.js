@@ -11,6 +11,7 @@ module.exports = {
 }
 
 function register_routes(app) {
+    app.use(routes.set_time); // for friends
     app.get('/hello', routes.get_helloworld);
     app.post('/login', routes.post_login);
     app.post('/register', routes.post_register); 
