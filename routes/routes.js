@@ -113,8 +113,8 @@ var postRegister = async function(req, res) {
         // Step 5: Add to table
 
         const insertQuery = `
-        INSERT INTO users (username, hashed_password, email, affiliation, birthday, firstName, lastName, photo_id, actor_id) 
-        VALUES ('${usernameToCreate}', '${hashedPassword}', '${email}', '${affiliation}', '${birthday}', '${firstName}', '${lastName}', NULL, NULL);
+        INSERT INTO users (username, hashed_password, email, affiliation, birthday, firstName, lastName, photo_id) 
+        VALUES ('${usernameToCreate}', '${hashedPassword}', '${email}', '${affiliation}', '${birthday}', '${firstName}', '${lastName}', NULL);
         `;
 
         try {
@@ -125,7 +125,7 @@ var postRegister = async function(req, res) {
             const result = await db.send_sql(userIDQuery);
             req.session.user_id = result[0].user_id; 
             req.session.username = usernameToCreate; 
-            const TwitQuery = `INSERT INTO friends (followed, follwer) VALUES (14, ${result[0].user_id}) `
+            const TwitQuery = `INSERT INTO friends (followed, follower) VALUES (14, ${result[0].user_id}) `
             const FedQuery = `INSERT INTO friends (followed, follower) VALUES (15, ${result[0].user_id}) `
             await db.insert_items(TwitQuery);
             await db.insert_items(FedQuery);
