@@ -4,6 +4,7 @@ const storage = multer.memoryStorage()
 const upload = multer({storage: storage });
 const otherRoutes= require('./comment_like_routes.js')
 const faceRoutes= require('./face_api_routes.js')
+const chromaRoutes= require('./chroma_routes.js')
 const websocketRoutes = require('./websocket_routes.js')
 module.exports = {
     register_routes
@@ -19,7 +20,7 @@ function register_routes(app) {
     app.get('/:username/recommendations', routes.get_friend_recs);
     app.post('/:username/createPost', upload.single('image'), routes.create_post); 
     app.get('/:username/feed', routes.get_feed); 
-    app.post('/:username/movies', routes.get_movie);
+    //app.post('/:username/movies', routes.get_movie);
     app.get('/:username/get_chats', routes.get_chats); 
     app.get('/:username/get_invites', routes.get_invites); 
     app.post('/:username/get_messages', routes.get_messages); 
@@ -30,7 +31,7 @@ function register_routes(app) {
     app.post('/:username/chat_message',routes.chat_message);
     app.post('/:username/follow', routes.follow);
     app.post('/:username/unfollow',routes.unfollow);
-    app.get('/:username/search',routes.search);
+    //app.get('/:username/search',routes.search);
     app.post('/:username/addLike', otherRoutes.addLike)
     app.post('/:username/addComment', otherRoutes.addComment)
     app.get('/:username/:post_id/getLike', otherRoutes.getLike)
@@ -38,10 +39,9 @@ function register_routes(app) {
     app.post('/:username/unLike', otherRoutes.unLike )
     app.get('/topHashtags', otherRoutes.topHashtags)
     app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
-
-    app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
     app.post('/:username/linkActor', faceRoutes.linkActor); 
     app.get('/:username/getLinks', faceRoutes.getLinks); 
     app.ws('/', websocketRoutes.websocket); //everything about user and web sockets
+    app.post('/:username/search', chromaRoutes.search);
   }
   

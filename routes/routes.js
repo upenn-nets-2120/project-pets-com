@@ -18,9 +18,6 @@ const {
   } = require("@langchain/core/runnables");
 const { Chroma } = require("@langchain/community/vectorstores/chroma");
 const { fromIni } = require("@aws-sdk/credential-provider-ini")
-
-
-
 const dbsingleton = require('../models/db_access.js');
 const config = require('../config.json'); // Load configuration
 const bcrypt = require('bcrypt'); 
@@ -31,7 +28,7 @@ const multer = require('multer');
 const crypto = require('crypto')
 const {getSignedUrl} = require('@aws-sdk/s3-request-presigner')
 const kafka = require('./kafka_routes.js')
-
+const cd = require('../models/chroma_access.js');
 
 //const { errorUtil } = require("zod/lib/helpers/errorUtil.js");
 
@@ -260,11 +257,6 @@ var postLogout = function(req, res) {
   return res.status(200).json( {message: "You were successfully logged out."} );
 };
 
-var getActors = function(req, res) {
-    return("Unimplemented"); 
-}
-
-
 // GET /friends
 var getFriends = async function(req, res) {
     // TODO: get all friends of current user
@@ -481,6 +473,8 @@ var createPost = async function(req, res) {
                 const postIDQuery = `SELECT post_id FROM posts WHERE author_id = '${userID}' ${title ? ` AND title = '${title.replace(/'/g, "''")}'` : ''} ${captions ? `AND captions = '${captions.replace(/'/g, "''")}'` : ""};`;
                 const result = await db.send_sql(postIDQuery);
                 const post_id = result[0].post_id; 
+                console.log("Results:" + result)
+                cd.embed_post(title, captions, post_id);
                 matches?.map(async match => {
                     const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post_id}, ${userID}) `
         
@@ -488,9 +482,6 @@ var createPost = async function(req, res) {
                      })
 
             }
-
-
-
             return res.status(201).json({message: "Post created."});
         } catch(error) {
             console.log(error);
@@ -580,77 +571,6 @@ var getFeed = async function(req, res) {
     }
     
     // TODO: get the correct posts to show on current user's feed
-}
-
-    //console.log(retriever2);
-var getMovie = async function(req, res) {
-    const posts = await db.get_posts();
-
-    const datasource = new DataSource({
-        type: "mysql",
-        database: posts, 
-    });
-    
-    //const postsText = posts.map(post => `${post.title}: ${post.captions}`).join('\n\n');
-    const vs = await getVectorStore();
-    const retriever = vs.asRetriever();
-    //const contentRetriever = simpleContentRetriever(postsText);
-    //const retriever = createRetrievalChain([retriever2]);
-
-    const context = req.body.context;
-    const question = req.body.question;
-
-    console.log("1")
-
-    const prompt =
-    PromptTemplate.fromTemplate(` 
-        Answer the question ${question} given the following context: ${context}. Posts is a database you have access to that holds data regarding posts on a social media site called Pennstagram.
-        `);
-    
-    const llm = new ChatOpenAI({
-        model: 'gpt-3.5-turbo',
-        temperature: 0,
-    });    
-    // TODO: replace with your language model
-
-    console.log("2")
-
-    const postdb = await SqlDatabase.fromDataSourceParams({
-        appDataSource: datasource,
-    });
-
-    console.log("3")
-
-    const toolkit = new SqlToolkit(postdb, llm);
-    const executor = createSqlAgent(llm, toolkit);
-
-    console.log("4")
-
-
-    const hybridRetriever = createRetrievalChain([
-        { retriever: retriever },
-        { retriever: executor } 
-    ]);
-
-    console.log("5")
-
-
-    const ragChain = RunnableSequence.from([
-        {
-            context: hybridRetriever.pipe(formatDocumentsAsString),
-            question: new RunnablePassthrough(),
-          },
-      prompt,
-      llm,
-      new StringOutputParser(),
-    ]);
-
-    console.log("6")
-
-
-    result = await ragChain.invoke(req.body.question);
-    console.log(result);
-    res.status(200).json({message: result});
 }
 
 var get_chats = async function (req,res) {
@@ -978,7 +898,6 @@ var routes = {
     post_logout: postLogout, 
     get_friends: getFriends,
     get_friend_recs: getFriendRecs,
-    get_movie: getMovie,
     create_post: createPost,
     get_feed: getFeed,
     get_chats: get_chats,
@@ -991,8 +910,7 @@ var routes = {
     chat_message: chat_message,
     follow: follow, 
     unfollow: unfollow,
-    search: search,
-    get_actors: getActors
+    search: search
   };
 
 

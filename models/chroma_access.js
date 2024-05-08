@@ -14,33 +14,62 @@ const { ChromaClient } = require('chromadb')
 const {OpenAIEmbeddingFunction} = require('chromadb');
 const process = require('process');
 
-
+api_key = process.env.OPENAI_API_KEY;
 const embedder = new OpenAIEmbeddingFunction({
-    openai_api_key: "apiKey", 
+    openai_api_key: api_key, 
     model: "text-embedding-3-small"
 })
 const sql = require('./db_access');
 
-module.exports = {
-    get_connection,
-    get_posts
+async function embed_posts_database() {
+  try {
+     const client = new ChromaClient({
+       path: 'http://localhost:8000'
+     });
+      const posts = await sql.get_posts();  
+      const postCollection = await client.getOrCreateCollection({
+        name: "posts", 
+        embeddingFunction: embedder
+    })
+     for (const post of posts) {
+      console.log(post)
+      await postCollection.add({
+        embeddings: embedder,
+        documents: [(post.title, post.captions)],
+        ids: [post.post_id.toString()],
+      });
+      console.log("Successful!")
+    }  
+  } catch (error) {
+      console.error('Error embedding posts:', error);
+  }
 }
 
-// export const run = async () => {
-//   const posts = sql.get_posts();
-  
-//   const datasource = new DataSource({
-//     type: "sqlite",
-//     database: posts,
-//   });
-//   const db = await SqlDatabase.fromDataSourceParams({
-//     appDataSource: datasource,
-//   });
-//   const model = new OpenAI({ temperature: 0 });
-//   const toolkit = new SqlToolkit(db, model);
-//   const executor = createSqlAgent(model, toolkit);
-// } 
+async function embed_post(title, caption, id) {
+  try {
+     const client = new ChromaClient({
+       path: 'http://localhost:8000'
+     });
+      const postCollection = await client.getOrCreateCollection({
+        name: "posts", 
+        embeddingFunction: embedder
+    })
+      await postCollection.add({
+        embeddings: embedder,
+        documents: [(title, caption)],
+        ids: [id.toString()],
+      });
+      console.log("Successful!") 
+  } catch (error) {
+      console.error('Error embedding posts:', error);
+  }
+}
 
+module.exports = {
+    get_connection,
+    embed_posts_database,
+    embed_post
+}
 
 async function get_connection() {
     // Create vector store and index the docs
