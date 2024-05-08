@@ -32,7 +32,6 @@ function register_routes(app) {
     app.post('/:username/chat_message',routes.chat_message);
     app.post('/:username/follow', routes.follow);
     app.post('/:username/unfollow',routes.unfollow);
-    //app.get('/:username/search',routes.search);
     app.post('/:username/addLike', otherRoutes.addLike)
     app.post('/:username/addComment', otherRoutes.addComment)
     app.get('/:username/:post_id/getLike', otherRoutes.getLike)

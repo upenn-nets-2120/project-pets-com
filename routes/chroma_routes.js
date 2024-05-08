@@ -5,75 +5,73 @@ const {DataSource} = require("typeorm");
 const { Chroma } = require("@langchain/community/vectorstores/chroma");
 const dbsingleton = require('../models/db_access.js');
 const cd = require('../models/chroma_access.js');
+const helper = require('../routes/route_helper.js');
+const {
+    RunnableSequence,
+    RunnablePassthrough,
+  } = require("@langchain/core/runnables");
+const { formatDocumentsAsString } = require("langchain/util/document");
+const { StringOutputParser } = require("@langchain/core/output_parsers");
+
+
 
 const db = dbsingleton;
+var vectorStore = null;
+
+var getVectorStore = async function(req) {
+    if (vectorStore == null) {
+        vectorStore = await Chroma.fromExistingCollection(new OpenAIEmbeddings(), {
+            collectionName: "posts-2",
+            url: "http://localhost:8000", // Optional, will default to this value
+            });
+    }
+    return vectorStore;
+}
 
 //GET /:username/search?=query
 var search = async function(req, res) {
-    //cd.embed_posts_database()
-    
 
-    // async function sendToEmbeddingAPI(posts) {
-    //     try {
-    //         const openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-    //             model_name="text-embedding-ada-002"
-    //         )               
-    //         students_embeddings = openai_ef([posts]) 
-    //     } catch (error) {
-    //         console.error('Failed to send data to the embedding API:', error);
-    //     }
+    // let username = req.params.username;
+    // if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+    //     return res.status(403).json( {error: 'Not logged in.'} );
+    // }
+    // if (!req.body || !req.body.question) {
+    //     return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+    // }
+    const question = req.body.question;
+    // if (!helper.isOK(question)) {
+    //     return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
     // }
 
-    // const datasource = new DataSource({
-    //     type: "mysql",
-    //     database: posts, 
-    // });
-    
-    // //const postsText = posts.map(post => `${post.title}: ${post.captions}`).join('\n\n');
-    // const vs = await getVectorStore();
-    // const retriever = vs.asRetriever();
-    // //const contentRetriever = simpleContentRetriever(postsText);
-    // //const retriever = createRetrievalChain([retriever2]);
+    //cd.embed_posts_database();
 
-    // const context = req.body.context;
-    // const question = req.body.question;
+    const vs = await getVectorStore();
+    const retriever = vs.asRetriever();
 
-    // const prompt =
-    // PromptTemplate.fromTemplate(` 
-    //     Answer the question ${question} given the following context: ${context}. Posts is a database you have access to that holds data regarding posts on a social media site called Pennstagram.
-    //     `);
-    
-    // const llm = new ChatOpenAI({
-    //     model: 'gpt-3.5-turbo',
-    //     temperature: 0,
-    // });    
-    // // TODO: replace with your language model
+    const context = req.body.context;
 
-    // const postdb = await SqlDatabase.fromDataSourceParams({
-    //     appDataSource: datasource,
-    // });
+    const prompt = PromptTemplate.fromTemplate(` 
+        Answer the question ${question} given the following context: ${context}. Posts is a database you have access to that holds data regarding posts on a social media site called Pennstagram.
+    `);
 
-    // const toolkit = new SqlToolkit(postdb, llm);
-    // const executor = createSqlAgent(llm, toolkit);
+    const llm = new ChatOpenAI({
+        model: 'gpt-3.5-turbo',
+        temperature: 0,
+    }); 
 
-    // const hybridRetriever = createRetrievalChain([
-    //     { retriever: retriever },
-    //     { retriever: executor } 
-    // ]);
+    const ragChain = RunnableSequence.from([
+        {
+            context: retriever.pipe(formatDocumentsAsString),
+            question: new RunnablePassthrough(),
+          },
+      prompt,
+      llm,
+      new StringOutputParser(),
+    ]);
 
-    // const ragChain = RunnableSequence.from([
-    //     {
-    //         context: hybridRetriever.pipe(formatDocumentsAsString),
-    //         question: new RunnablePassthrough(),
-    //       },
-    //   prompt,
-    //   llm,
-    //   new StringOutputParser(),
-    // ]);
-
-    // result = await ragChain.invoke(req.body.question);
-    // console.log(result);
-    // res.status(200).json({message: result});
+    result = await ragChain.invoke(req.body.question);
+    console.log(result);
+    res.status(200).json({message: result});
 }
 
 var chromaRoutes = {

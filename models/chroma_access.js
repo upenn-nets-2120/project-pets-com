@@ -14,7 +14,7 @@ const { ChromaClient } = require('chromadb')
 const {OpenAIEmbeddingFunction} = require('chromadb');
 const process = require('process');
 
-api_key = process.env.OPENAI_API_KEY;
+let api_key = process.env.OPENAI_API_KEY;
 const embedder = new OpenAIEmbeddingFunction({
     openai_api_key: api_key, 
     model: "text-embedding-3-small"
@@ -28,15 +28,15 @@ async function embed_posts_database() {
      });
       const posts = await sql.get_posts();  
       const postCollection = await client.getOrCreateCollection({
-        name: "posts", 
+        name: "posts-2", 
         embeddingFunction: embedder
     })
      for (const post of posts) {
       console.log(post)
       await postCollection.add({
         embeddings: embedder,
-        documents: [(post.title, post.captions)],
-        ids: [post.post_id.toString()],
+        documents: "Title:" + post.title + " Caption:" + post.captions,
+        ids: post.post_id.toString()
       });
       console.log("Successful!")
     }  
@@ -45,19 +45,19 @@ async function embed_posts_database() {
   }
 }
 
-async function embed_post(title, caption, id) {
+async function embed_post(title, captions, id) {
   try {
      const client = new ChromaClient({
        path: 'http://localhost:8000'
      });
       const postCollection = await client.getOrCreateCollection({
-        name: "posts", 
+        name: "posts-2", 
         embeddingFunction: embedder
     })
       await postCollection.add({
         embeddings: embedder,
-        documents: [(title, caption)],
-        ids: [id.toString()],
+        documents: "Title:" + title + " Caption:" + captions,
+        ids: id.toString(),
       });
       console.log("Successful!") 
   } catch (error) {
@@ -74,7 +74,7 @@ module.exports = {
 async function get_connection() {
     // Create vector store and index the docs
     const vectorStore = await Chroma.fromExistingCollection(new OpenAIEmbeddings(), {
-    collectionName: "imdb_reviews2",
+    collectionName: "posts-2",
     url: "http://localhost:8000", // Optional, will default to this value
     });
 
@@ -105,7 +105,7 @@ async function get_collection() {
 
 //   const collection = client.collection('imdb_reviews');
   let collection = await client.getCollection({
-    name: "imdb_reviews2",
+    name: "posts-2",
     embeddingFunction: emb_fn,
   });
   console.log(collection);
