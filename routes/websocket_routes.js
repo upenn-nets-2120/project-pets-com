@@ -6,6 +6,7 @@ const connections = new Map()
 //key: user_id
 //value: websocket connection (STATUS: ALIVE/DEAD), timesout automatically after 60s
 //value: chat_ids [] (chat_id, chat_name)
+//timestamp, time since last active
 */
 const websocket = async (ws, req) => {
     if (req.session == null || req.session.user_id == null) {
@@ -18,8 +19,9 @@ const websocket = async (ws, req) => {
         //case 0: initialization / getting chats
         console.log("Websocket 200:", message)
         const msg = JSON.parse(message)
-
-        connections.set(userID,{websocket:ws, chat_ids:msg.chat_ids})
+        if (msg.chat_ids != null) {
+            connections.set(userID,{websocket:ws, chat_ids:msg.chat_ids})
+        }
         if (msg.purpose == "init") {
             connections.set(userID,{websocket:ws, chat_ids:msg.chat_ids})
         }
@@ -71,7 +73,7 @@ const websocket = async (ws, req) => {
     });    
     };
 
-//DEBUGGING: connections for dead websockets every 5 seconds
+//DEBUGGING:
 // const interval = setInterval(async function() {
 //     // method to be executed;
 //     //for each connection, check if its alive
@@ -80,6 +82,7 @@ const websocket = async (ws, req) => {
 //         console.log(`user_id:${user_id}  chat_ids:${conn.chat_ids}`)
 //     })
 //     }, 5000);
+
     
 var routes = {
     websocket:websocket

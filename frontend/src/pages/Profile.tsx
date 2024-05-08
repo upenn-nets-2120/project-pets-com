@@ -62,14 +62,14 @@ export default function Profile() {
     fetchData();
   }, []);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e : any) => {
     const file = e.target.files[0];
     setFile(file);
     setFileURL(URL.createObjectURL(e.target.files[0]));
     //console.log(file);
   };
 
-  const handleActorClick = async (index) => {
+  const handleActorClick = async (index : any) => {
     setActors((prevActors) =>
       prevActors.map((actor, i) =>
         i === index ? { ...actor, clicked: !actor.clicked } : actor
@@ -83,7 +83,7 @@ export default function Profile() {
   };
 
   // TODO: handleSubmit
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e : any) => {
     // TODO: make sure passwords match
     e.preventDefault();
 
@@ -120,7 +120,7 @@ export default function Profile() {
         }
       );
 
-      const actorsWithClicked = similarActors.data.results.map((actor) => ({
+      const actorsWithClicked = similarActors.data.results.map((actor : any) => ({
         ...actor,
         clicked: false,
       }));

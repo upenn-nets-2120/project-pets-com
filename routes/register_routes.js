@@ -10,6 +10,7 @@ module.exports = {
 }
 
 function register_routes(app) {
+    app.use(routes.set_time); // for friends
     app.get('/hello', routes.get_helloworld);
     app.post('/login', routes.post_login);
     app.post('/register', routes.post_register); 
@@ -37,8 +38,6 @@ function register_routes(app) {
     app.get('/:username/:post_id/getComments', otherRoutes.getComments)
     app.post('/:username/unLike', otherRoutes.unLike )
     app.get('/topHashtags', otherRoutes.topHashtags)
-    app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
-
     app.post('/:username/getActors', upload.single('image'), faceRoutes.getActors); 
     app.post('/:username/linkActor', faceRoutes.linkActor); 
     app.get('/:username/getLinks', faceRoutes.getLinks); 

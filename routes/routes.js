@@ -55,7 +55,6 @@ var getVectorStore = async function(req) {
     return vectorStore;
 }
 
-
 // POST /register 
 var postRegister = async function(req, res) {
     // TODO: register a user with given body parameters
@@ -276,7 +275,7 @@ var getFriends = async function(req, res) {
         return res.status(403).json( {error: 'Not logged in.'} );
     }
     // Step 2: Get their friends (not necessarily registered users)
-    const getFriendsQuery =  `SELECT DISTINCT users.user_id, users.username, users.firstName, users.lastName FROM users JOIN friends ON users.user_id = friends.followed WHERE friends.follower = '${user_id}';`
+    const getFriendsQuery =  `SELECT DISTINCT users.user_id, users.username, users.firstName, users.lastName, timestamp.timestamp FROM users JOIN friends ON users.user_id = friends.followed LEFT JOIN timestamp ON timestamp.user_id = users.user_id WHERE friends.follower = '${user_id}';`
     try {
         const results = await db.send_sql(getFriendsQuery);
         return res.status(200).json({results: results});
@@ -300,10 +299,10 @@ var getFriendRecs = async function(req, res) {
 
     // Step 2: Get their recommendations (not necessarily registered users.)
     //Temporary measure, but we should ignore friends we've already added
-    const getRecommendationsQuery = `SELECT DISTINCT user_id, username, firstName, lastName 
-    FROM users 
-    WHERE user_id != ${user_id} 
-    AND user_id NOT IN (
+    const getRecommendationsQuery = `SELECT DISTINCT users.user_id, users.username, users.firstName, users.lastName, timestamp.timestamp
+    FROM users LEFT JOIN timestamp ON users.user_id=timestamp.user_id
+    WHERE users.user_id != ${user_id} 
+    AND users.user_id NOT IN (
         SELECT followed 
         FROM friends 
         WHERE follower = ${user_id}
@@ -885,6 +884,25 @@ var search = async function (req,res) {
     }
 }
 
+//USE (Middleware) /set_time
+var set_time = function (req,res,next) {
+    if (req != null && req.session != null && req.session.user_id != null) {
+        const userID = req.session.user_id
+        const timestamp = Date.now();
+        try {
+            const response = db.insert_items(
+                `INSERT INTO timestamp (user_id, timestamp) 
+                VALUES (${userID}, ${timestamp}) 
+                ON DUPLICATE KEY UPDATE 
+                    timestamp = ${timestamp};`);
+            console.log(`Registered timestamp ${username}`)
+        } catch (error){
+            //fail silently
+        }
+    }
+    next(); //move on
+}
+
 /* Here we construct an object that contains a field for each route
    we've defined, so we can call the routes from app.js. */
 
@@ -968,9 +986,10 @@ var search = async function (req,res) {
             return [{ text: postsText, score: 1 }]; // Assuming the retriever expects an array of results
         }
     };
-}
+    }
 
 var routes = { 
+    set_time : set_time,
     get_helloworld: getHelloWorld,
     post_login: postLogin,
     post_register: postRegister,
