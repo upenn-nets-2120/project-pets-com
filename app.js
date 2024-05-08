@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+var expressWs = require('express-ws')(app);
 const port = 8080;
 const registry = require('./routes/register_routes.js');
 const kafka = require('./routes/kafka_routes.js')
@@ -10,6 +11,7 @@ app.use(cors({
   methods: ['POST', 'PUT', 'GET', 'OPTIONS', 'HEAD'],
   credentials: true
 }));
+
 app.use(express.json());
 app.use(session({
   secret: 'nets2120_insecure', saveUninitialized: true, cookie: { httpOnly: false }, resave: true
@@ -17,7 +19,7 @@ app.use(session({
 
 
 registry.register_routes(app);
-kafka.runConsumer().catch(console.error);
+//kafka.runConsumer().catch(console.error);
 
 
 app.listen(port, () => {

@@ -10,7 +10,7 @@ axios.defaults.withCredentials = true;
 export default function Home() {
   interface Feed {
     post_id: number;
-    user: string;
+    user: string | undefined;
     title: string;
     img_url: string;
     captions: string;
@@ -116,6 +116,7 @@ export default function Home() {
               numlikes={feed.numlikes}
               liked={feed.liked}
               comments={feed.comments}
+              commentUsers={[]}
             />
           ))}
       </div>

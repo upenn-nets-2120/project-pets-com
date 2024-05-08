@@ -97,31 +97,52 @@ async function create_tables(db) {
   //TODO: Create chats table
   var q8 = db.create_tables('CREATE TABLE IF NOT EXISTS chats ( \
     chat_id int PRIMARY KEY NOT NULL AUTO_INCREMENT, \
-    chat_name VARCHAR(225), \
+    chat_name VARCHAR(255) \
+    );')
+
+  //TODO: Create chatters table
+  var q9 = db.create_tables('CREATE TABLE IF NOT EXISTS chatters ( \
+    PRIMARY KEY (chat_id, user_id), \
+    chat_id int, \
     user_id int, \
-    FOREIGN KEY (user_id) REFERENCES users(user_id) \
+    FOREIGN KEY (user_id) REFERENCES users(user_id), \
+    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) \
+    );')
+
+
+  //TODO: Create invites table
+  var q10 = db.create_tables('CREATE TABLE IF NOT EXISTS invites ( \
+    PRIMARY KEY (chat_id, user_id, inviter_id),\
+    chat_id int, \
+    user_id int, \
+    inviter_id int, \
+    FOREIGN KEY (chat_id) REFERENCES chats(chat_id), \
+    FOREIGN KEY (user_id) REFERENCES users(user_id), \
+    FOREIGN KEY (inviter_id) REFERENCES users(user_id) \
     );')
 
   //TODO: Create messages table
-  var q9 = db.create_tables('CREATE TABLE IF NOT EXISTS messages ( \
+  var q11 = db.create_tables('CREATE TABLE IF NOT EXISTS messages ( \
     message_id int PRIMARY KEY NOT NULL AUTO_INCREMENT, \
     chat_id int, \
     author_id int, \
     timestamp int, \
-    message VARCHAR(225), \
+    message VARCHAR(255), \
     FOREIGN KEY (chat_id) REFERENCES chats(chat_id), \
     FOREIGN KEY (author_id) REFERENCES users(user_id)\
     );')
+  //DO ONCE, DONE ALREADY
+  //var q12 = db.send_sql("LOAD DATA LOCAL INFILE 'models/names.csv' INTO TABLE actors FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' IGNORE 1 ROWS (actor_name, birthYear, deathYear, actor_id, nconst_short);");
 
-    //var q11 = db.send_sql("ALTER TABLE users DROP FOREIGN KEY users_ibfk_1;")
+  //var q13 = db.send_sql("ALTER TABLE users DROP FOREIGN KEY users_ibfk_1;")
 
-    var q10 = db.create_tables('CREATE TABLE IF NOT EXISTS userActorLink ( \
-      username VARCHAR(255) NOT NULL, \
-      actor_id VARCHAR(10), \
-      FOREIGN KEY (actor_id) REFERENCES actors(actor_id) \
-      );')
+  var q14 = db.create_tables('CREATE TABLE IF NOT EXISTS userActorLink ( \
+    username VARCHAR(255) NOT NULL, \
+    actor_id VARCHAR(10), \
+    FOREIGN KEY (actor_id) REFERENCES actors(actor_id) \
+    );')
 
-  return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9, q10]);
+  return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q14]);
 }
 
 // Database connection setup

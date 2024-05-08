@@ -70,7 +70,7 @@ export default function PostComponent({
       )}
       {image && <img src={image} style={{ width: "300px", height: "200px" }} />}
       <div className="">{description}</div>
-      <FavoriteBorderIcon
+      <button
         className={`${like ? "text-red-500" : "text-black"}`}
         onClick={() => changeLike()}
       />{" "}
