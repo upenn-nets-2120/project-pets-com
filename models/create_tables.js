@@ -148,15 +148,13 @@ async function create_tables(db) {
     FOREIGN KEY (user_id) REFERENCES users(user_id) \
     );')
   
-  var q16 = db.create_tables('CREATE TABLE IF NOT EXISTS recommendations ( \
-    PRIMARY KEY (user_id, recommendation, strength), \
-    user_id int, \
-    recommendation int, \
-    strength int, \
-    FOREIGN KEY (user_id) REFERENCES users(user_id), \
-    FOREIGN KEY (recommendation) REFERENCES users(user_id) \
+  var q17 = db.create_tables('CREATE TABLE IF NOT EXISTS postRank ( \
+    post_id INT PRIMARY KEY, \
+    rank_score DOUBLE, \
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, \
+    FOREIGN KEY (post_id) REFERENCES posts(post_id) \
     );')
-  return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q14, q15]);
+  return await Promise.all([q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q14, q15, q17]);
 }
 
 // Database connection setup

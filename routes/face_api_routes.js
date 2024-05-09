@@ -126,6 +126,9 @@ var getActors = async function(req, res) {
         const GetNconsts = matchesIds[0].map(item => item.replace('.jpg-1', ''));
         const formattedIds = GetNconsts.map(id => `'${id}'`).join(',');
 
+
+        if(formattedIds.length > 0){
+
         const getFromActorsQuery = `
         SELECT actor_name, actor_id 
         FROM actors 
@@ -134,8 +137,11 @@ var getActors = async function(req, res) {
        const results = await db.send_sql(getFromActorsQuery);
 
        return res.status(200).json({ results: results });
+        }
+        return;
 
     } catch (error) {
+        console.log(error)
         return res.status(500).json({error: 'Error querying database.', error});
     };
 }
