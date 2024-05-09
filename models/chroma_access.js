@@ -32,13 +32,12 @@ async function embed_posts_database() {
         embeddingFunction: embedder
     })
      for (const post of posts) {
-      console.log(post)
-      await postCollection.add({
-        embeddings: embedder,
-        documents: "Title:" + post.title + " Caption:" + post.captions,
-        ids: post.post_id.toString()
+      console.log("Title:" + post.title + " Caption:" + post.captions)
+      const res = await postCollection.add({
+        ids: post.post_id.toString(),
+        documents: "Title:" + post.title + " Caption:" + post.captions
       });
-      console.log("Successful!")
+      console.log(res)
     }  
   } catch (error) {
       console.error('Error embedding posts:', error);
