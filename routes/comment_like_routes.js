@@ -153,12 +153,67 @@ var topHashtags = async function(req, res){
     }
 }
 
+var getHashtags = async function(req, res){
+        const username = req.params.username
+        const user_id = req.session.user_id;
+        if (!helper.isLoggedIn(req, username) || user_id == null) {
+            return res.status(403).json( {error: 'Not logged in.'} );
+        }
+    
+        try{
+    
+        const results = await db.send_sql(`SELECT hashtag FROM hashtags WHERE follower_id = ${user_id}`)
+        return res.status(200).json({results: results})
+            } catch(error){
+                console.log(error)
+                return res.status(500).json({error: 'Error querying database.'});
+            }
+
+
+
+}
+
+var changeHashtags = async function(req, res){
+    const username = req.params.username
+    const hashtags = req.body.hashtags
+    const user_id = req.session.user_id;
+
+    if (!helper.isLoggedIn(req, username) || user_id == null) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    try{
+    
+    const results = await db.send_sql(`SELECT hashtag FROM hashtags WHERE follower_id = ${user_id}`)
+    const hashes = results.map((inp) => inp.hashtag)
+    hashtags.map(async(inp) => {
+        if(!hashes.include(inp)){
+            await db.insert_items(`INSERT INTO hashtags (hashtag, follower_id) VALUES ('${inp.includes("#") ? inp : "#" + inp}', ${user_id} )`);
+        }
+    })
+
+    hashes.map(async(inp) => {
+        if(!hashtags.include(inp)){
+            await db.insert_items(`DELETE FROM hashtags WHERE follower_id = ${user_id} AND hashtag = '${inp}'`);
+
+        }
+    })
+    return res.status(200).json({results: results})
+    } catch(error){
+         console.log(error)
+        return res.status(500).json({error: 'Error querying database.'});
+    }
+
+
+}
+
 var otherRoutes = {
     addLike,
     getLike,
     unLike,
     addComment,
     getComments,
-    topHashtags
+    topHashtags,
+    getHashtags,
+    changeHashtags
 }
 module.exports = otherRoutes
