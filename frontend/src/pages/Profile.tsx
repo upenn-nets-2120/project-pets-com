@@ -17,6 +17,7 @@ export default function Profile() {
   const [file, setFile] = useState(null);
   const [fileURL, setFileURL] = useState("");
   const [links, setLinks] = useState([]);
+  const [hashtags, setHashtags] = useState([""]);
 
   const [actors, setActors] = useState<Actor[]>([]);
 
@@ -53,6 +54,11 @@ export default function Profile() {
       if (linkResponse.status == 200) {
         setLinks(linkResponse.data.results);
       }
+      const hashResponse = await axios.get(`${rootURL}/topHashtags`);
+
+      if (hashResponse.status == 200) {
+        setHashtags(hashResponse.data.results.map((inp) => inp.hashtag));
+      }
     } catch (error) {
       console.error("Error fetching feed data:", error);
     }
@@ -62,14 +68,14 @@ export default function Profile() {
     fetchData();
   }, []);
 
-  const handleFileChange = (e : any) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFile(file);
     setFileURL(URL.createObjectURL(e.target.files[0]));
     //console.log(file);
   };
 
-  const handleActorClick = async (index : any) => {
+  const handleActorClick = async (index) => {
     setActors((prevActors) =>
       prevActors.map((actor, i) =>
         i === index ? { ...actor, clicked: !actor.clicked } : actor
@@ -83,7 +89,7 @@ export default function Profile() {
   };
 
   // TODO: handleSubmit
-  const handleSubmit = async (e : any) => {
+  const handleSubmit = async (e) => {
     // TODO: make sure passwords match
     e.preventDefault();
 
@@ -120,11 +126,18 @@ export default function Profile() {
         }
       );
 
-      const actorsWithClicked = similarActors.data.results.map((actor : any) => ({
+      const actorsWithClicked = similarActors.data.results.map((actor) => ({
         ...actor,
         clicked: false,
       }));
       setActors(actorsWithClicked);
+
+      const h = await axios.post(
+        `${config.serverRootURL}/${username}/changeHashtags`,
+        {
+          hashtags: hashtags,
+        }
+      );
 
       //console.log(similarActors.data);
 
@@ -141,6 +154,16 @@ export default function Profile() {
       console.log(error);
       alert("Registration failed.");
     }
+  };
+
+  const changeHashTags = (changer: string, index: number) => {
+    let a = hashtags;
+    a[index] = changer;
+    setHashtags([...a]);
+  };
+
+  const addHashTag = () => {
+    setHashtags((prevHash) => [...prevHash, ""]);
   };
 
   return (
@@ -226,6 +249,25 @@ export default function Profile() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
+            </div>
+            <div className="flex space-x-4 items-center justify-between">
+              Hashtags
+              <div className="flex flex-col">
+                {hashtags.map((inp, index) => (
+                  <input
+                    type="text"
+                    value={inp}
+                    className="outline-none bg-white rounded-md border border-slate-100 p-2"
+                    onChange={(e) => changeHashTags(e.target.value, index)}
+                  />
+                ))}
+                <div
+                  className="cursor-pointer border"
+                  onClick={() => addHashTag()}
+                >
+                  Add Hashtag
+                </div>
+              </div>
             </div>
             <div className="w-full flex justify-center">
               <button
