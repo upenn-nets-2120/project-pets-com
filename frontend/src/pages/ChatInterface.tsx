@@ -451,6 +451,7 @@ const InviteSelector = ({
       console.log("username cannot be null");
       return;
     }
+    console.log(_chat_id)
     if (_chat_id >= 0) { //Human
       try {
         const now = Date.now()

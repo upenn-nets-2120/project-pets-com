@@ -947,6 +947,7 @@ var routes = {
     chat_leave: chat_leave,
     chat_invite: chat_invite,
     chat_message: chat_message,
+    get_movie:getMovie,
     follow: follow, 
     unfollow: unfollow,
     search: search

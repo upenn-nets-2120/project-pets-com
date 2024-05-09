@@ -21,7 +21,7 @@ function register_routes(app) {
     app.get('/:username/recommendations', routes.get_friend_recs);
     app.post('/:username/createPost', upload.single('image'), routes.create_post); 
     app.get('/:username/feed', routes.get_feed); 
-    //app.post('/:username/movies', routes.get_movie);
+    app.post('/:username/movies', routes.get_movie);
     app.get('/:username/get_chats', routes.get_chats); 
     app.get('/:username/get_invites', routes.get_invites); 
     app.post('/:username/get_messages', routes.get_messages); 
