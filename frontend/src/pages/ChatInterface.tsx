@@ -18,6 +18,7 @@ interface Friend {
   username : string;
   firstName: string;
   lastName : string;
+  timestamp : number;
 }
 
 interface Message {
@@ -164,6 +165,7 @@ const InviteSelector = ({
   friend_username,
   friend_firstName,
   friend_lastName,
+  timestamp,
   callback
 }: {
   chat_id : number,
@@ -171,12 +173,34 @@ const InviteSelector = ({
   friend_username : string;
   friend_firstName : string;
   friend_lastName : string;
+  timestamp : number;
   callback : Function;
 }) => {
+  function formatTimestamp(time : number) {
+    var timestamp = time;
+    if (timestamp == null) {
+      timestamp = 1704067200000
+    }
+    const secondsAgo = Math.floor((Date.now() - timestamp) / 1000);
+    if (secondsAgo < 60) {
+      return "Online";
+    } else if (secondsAgo < 3600) {
+      const minutes = Math.floor(secondsAgo / 60);
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (secondsAgo < 86400) {
+      const hours = Math.floor(secondsAgo / 3600);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(secondsAgo / 86400);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+  }
+
   return (
     <div className="rounded-md bg-slate-100 p-3 flex space-x-2 items-center flex-auto justify-between">
       <div className="font-semibold text-base">
-        {friend_username}, {friend_firstName} {friend_lastName}
+        {friend_username}, {friend_firstName} {friend_lastName} 
+        <span className="text-xs text-gray-500">{formatTimestamp(timestamp)}</span>
       </div>
       <div className="flex space-x-2">
         {(
@@ -570,7 +594,7 @@ const InviteSelector = ({
             </button>
             {friendsList.map((friend, index) => (
               <div key={index} className="flex items-center space-x-2">
-                <InviteSelector chat_id={chatID} friend_id={friend.user_id} friend_username={friend.username} friend_firstName={friend.firstName} friend_lastName={friend.lastName} callback={() => {
+                <InviteSelector chat_id={chatID} friend_id={friend.user_id} friend_username={friend.username} friend_firstName={friend.firstName} friend_lastName={friend.lastName} timestamp={friend.timestamp} callback={() => {
                   chat_invite(chatID, chatName, friend.user_id)}
                   }></InviteSelector>
               </div>
@@ -603,7 +627,7 @@ const InviteSelector = ({
               />
             {friendsList.map((friend, index) => (
               <div key={index} className="flex items-center space-x-2">
-                <InviteSelector chat_id={0} friend_id={friend.user_id} friend_username={friend.username} friend_firstName={friend.firstName} friend_lastName={friend.lastName} 
+                <InviteSelector chat_id={0} friend_id={friend.user_id} friend_username={friend.username} friend_firstName={friend.firstName} friend_lastName={friend.lastName} timestamp={friend.timestamp}
                 callback={async () => {
                   const _chat_id = await chat_create();
                   chat_invite(_chat_id, newChatName, friend.user_id);
