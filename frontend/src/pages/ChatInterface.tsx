@@ -451,6 +451,7 @@ const InviteSelector = ({
       console.log("username cannot be null");
       return;
     }
+    console.log(_chat_id)
     if (_chat_id >= 0) { //Human
       try {
         const now = Date.now()
@@ -471,7 +472,7 @@ const InviteSelector = ({
       try {
         const now = Date.now()
         setMessages([...messages, { sender: username, message: input, timestamp: now}]);
-        const response = await axios.post(`//localhost:8080/${username}/movies`, {
+        const response = await axios.post(`//localhost:8080/${username}/search`, {
           question: input,
           context: messages,
         });

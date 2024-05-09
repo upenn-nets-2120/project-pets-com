@@ -63,7 +63,7 @@ async function get_db_connection() {
 }
 
 async function get_posts() {
-    return send_sql("SELECT posts.captions, posts.title, posts.post_id FROM posts");
+    return send_sql("SELECT posts.captions, posts.title, posts.post_id, users.username FROM posts JOIN users ON posts.author_id = users.user_id;");
 }
   
 
