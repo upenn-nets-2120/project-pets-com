@@ -25,6 +25,7 @@ var getVectorStore = async function(req) {
             url: "http://localhost:8000", // Optional, will default to this value
             });
     }
+    console.log(vectorStore)
     return vectorStore;
 }
 
@@ -51,7 +52,7 @@ var search = async function(req, res) {
     const context = req.body.context;
 
     const prompt = PromptTemplate.fromTemplate(` 
-        Answer the question ${question} given the following context: ${context}. Posts is a database you have access to that holds data regarding posts on a social media site called Pennstagram.
+        Answer the question ${question} given the following context: ${context}. Always respond with a title and the caption.
     `);
 
     const llm = new ChatOpenAI({

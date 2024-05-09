@@ -35,7 +35,7 @@ async function embed_posts_database() {
       console.log("Title:" + post.title + " Caption:" + post.captions)
       const res = await postCollection.add({
         ids: post.post_id.toString(),
-        documents: "Title:" + post.title + " Caption:" + post.captions
+        documents: "Title:" + post.title + " Caption:" + post.captions + " Title" + post.username 
       });
       console.log(res)
     }  

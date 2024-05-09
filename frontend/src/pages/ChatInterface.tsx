@@ -471,7 +471,7 @@ const InviteSelector = ({
       try {
         const now = Date.now()
         setMessages([...messages, { sender: username, message: input, timestamp: now}]);
-        const response = await axios.post(`//localhost:8080/${username}/movies`, {
+        const response = await axios.post(`//localhost:8080/${username}/search`, {
           question: input,
           context: messages,
         });
