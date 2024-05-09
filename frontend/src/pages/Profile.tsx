@@ -126,11 +126,15 @@ export default function Profile() {
         }
       );
 
+      console.log("After actors");
+
       const actorsWithClicked = similarActors.data.results.map((actor) => ({
         ...actor,
         clicked: false,
       }));
       setActors(actorsWithClicked);
+
+      console.log("Before hashtags");
 
       const h = await axios.post(
         `${config.serverRootURL}/${username}/changeHashtags`,

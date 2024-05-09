@@ -519,6 +519,7 @@ var getFeed = async function(req, res) {
     // Step 1: Make sure the user is logged in.
 
     const username = req.params.username;
+    const end = req.params.end
 
     if (!helper.isLoggedIn(req, username)) {
         return res.status(403).json( {error: 'Not logged in.'} );
@@ -559,7 +560,8 @@ var getFeed = async function(req, res) {
     FROM posts LEFT JOIN numlikes ON posts.post_id = numlikes.post_id
     LEFT JOIN liked ON posts.post_id = liked.post_id
     LEFT JOIN commentList ON commentList.post_id = liked.post_id
-    ORDER BY posts.post_id DESC;`;
+    ORDER BY posts.post_id DESC
+    LIMIT ${end};`;
 
     // console.log(userID)
     // console.log(getFeedQuery)
