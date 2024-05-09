@@ -186,13 +186,13 @@ var changeHashtags = async function(req, res){
     const results = await db.send_sql(`SELECT hashtag FROM hashtags WHERE follower_id = ${user_id}`)
     const hashes = results.map((inp) => inp.hashtag)
     hashtags.map(async(inp) => {
-        if(!hashes.include(inp)){
+        if(!hashes.includes(inp)){
             await db.insert_items(`INSERT INTO hashtags (hashtag, follower_id) VALUES ('${inp.includes("#") ? inp : "#" + inp}', ${user_id} )`);
         }
     })
 
     hashes.map(async(inp) => {
-        if(!hashtags.include(inp)){
+        if(!hashtags.includes(inp)){
             await db.insert_items(`DELETE FROM hashtags WHERE follower_id = ${user_id} AND hashtag = '${inp}'`);
 
         }
