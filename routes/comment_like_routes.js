@@ -163,6 +163,8 @@ var getHashtags = async function(req, res){
         try{
     
         const results = await db.send_sql(`SELECT hashtag FROM hashtags WHERE follower_id = ${user_id}`)
+        console.log(user_id)
+        console.log(results)
         return res.status(200).json({results: results})
             } catch(error){
                 console.log(error)
@@ -183,18 +185,23 @@ var changeHashtags = async function(req, res){
     }
     try{
     
+
     const results = await db.send_sql(`SELECT hashtag FROM hashtags WHERE follower_id = ${user_id}`)
+    console.log(results)
     const hashes = results.map((inp) => inp.hashtag)
     hashtags.map(async(inp) => {
         if(!hashes.includes(inp)){
-            await db.insert_items(`INSERT INTO hashtags (hashtag, follower_id) VALUES ('${inp.includes("#") ? inp : "#" + inp}', ${user_id} )`);
+            const q = `INSERT INTO hashtags (hashtag, follower_id) VALUES ('${inp.includes("#") ? inp : "#" + inp}', ${user_id} )`
+            console.log(q)
+            await db.insert_items(q);
         }
     })
 
     hashes.map(async(inp) => {
         if(!hashtags.includes(inp)){
-            await db.insert_items(`DELETE FROM hashtags WHERE follower_id = ${user_id} AND hashtag = '${inp}'`);
-
+            const q = `DELETE FROM hashtags WHERE follower_id = ${user_id} AND hashtag = '${inp}'`
+            console.log(q)            
+            await db.insert_items(q)
         }
     })
     return res.status(200).json({results: results})

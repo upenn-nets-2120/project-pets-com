@@ -138,7 +138,7 @@ var getActors = async function(req, res) {
 
        return res.status(200).json({ results: results });
         }
-        return;
+        return res.status(201).json({results: {}});
 
     } catch (error) {
         console.log(error)

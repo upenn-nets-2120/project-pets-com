@@ -47,17 +47,20 @@ export default function Profile() {
 
   const fetchData = async () => {
     try {
+      const hashResponse = await axios.get(
+        `${rootURL}/${username}/getHashtags`
+      );
+
+      if (hashResponse.status == 200) {
+        setHashtags(hashResponse.data.results.map((inp) => inp.hashtag));
+      }
+
       const linkResponse = await axios.get(
         `${config.serverRootURL}/${username}/getLinks`
       );
 
       if (linkResponse.status == 200) {
         setLinks(linkResponse.data.results);
-      }
-      const hashResponse = await axios.get(`${rootURL}/topHashtags`);
-
-      if (hashResponse.status == 200) {
-        setHashtags(hashResponse.data.results.map((inp) => inp.hashtag));
       }
     } catch (error) {
       console.error("Error fetching feed data:", error);
@@ -128,11 +131,13 @@ export default function Profile() {
 
       console.log("After actors");
 
-      const actorsWithClicked = similarActors.data.results.map((actor) => ({
-        ...actor,
-        clicked: false,
-      }));
-      setActors(actorsWithClicked);
+      if (similarActors.status == 200) {
+        const actorsWithClicked = similarActors?.data.results.map((actor) => ({
+          ...actor,
+          clicked: false,
+        }));
+        setActors(actorsWithClicked);
+      }
 
       console.log("Before hashtags");
 

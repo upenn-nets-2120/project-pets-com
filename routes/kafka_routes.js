@@ -46,7 +46,7 @@ const cPost = async(id, title, captions) => {
         captions = captions.replace(/'/g, "''")
     }
     var insertPostQuery =  `
-    INSERT INTO posts (author_id, title, captions) 
+    INSERT IGNORE INTO posts (author_id, title, captions) 
     VALUES (${id}, '${title}', '${captions}');
     `;
     try {
@@ -91,6 +91,7 @@ const runConsumer = async () => {
                 }
                 await cPost(14, null, mess);
                 
+                
 
 
             } else if(topic == "FederatedPosts"){
@@ -102,7 +103,9 @@ const runConsumer = async () => {
                 if(m.post_text){
                     mess = m.post_text
                 }
+                if(m.source_site != "g23"){
                 await cPost(15, title, mess );
+                }
             }
 
         }

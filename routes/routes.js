@@ -452,7 +452,7 @@ var createPost = async function(req, res) {
         console.log("Above try!")
     
         try {
-            //kafka.sendMessage (username, "g23", userID, captions, 'text/html');
+            kafka.sendMessage (username, "g23", userID, captions, 'text/html');
 
             if(!image && !captions){
                 const insertPostQuery =  `
@@ -476,8 +476,10 @@ var createPost = async function(req, res) {
             } else {
                 const insertPostQuery =  `
             INSERT INTO posts (author_id, title, image_id, captions) 
-            VALUES (${userID}, '${title}', '${image_id}', '${captions}');
+            VALUES (${userID}, '${title.replace(/'/g, "''")}', '${image_id}', '${captions.replace(/'/g, "''")}');
             `;
+            await db.insert_items(insertPostQuery);
+
             console.log("s3 ing ...")
             const resp = await putS3Object("photos-pets-com", image, image_id);
             console.log("Returning ...")
@@ -491,6 +493,7 @@ var createPost = async function(req, res) {
                 //Need to get PostID!!!
                 const postIDQuery = `SELECT post_id FROM posts WHERE author_id = '${userID}' ${title ? ` AND title = '${title.replace(/'/g, "''")}'` : ''} ${captions ? `AND captions = '${captions.replace(/'/g, "''")}'` : ""};`;
                 const result = await db.send_sql(postIDQuery);
+                console.log(result)
                 const post_id = result[0].post_id; 
                 console.log("Results:" + result)
                 cd.embed_post(title, captions, post_id);
