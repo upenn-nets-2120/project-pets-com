@@ -130,6 +130,37 @@ def main():
     concatenated_df = concatenated_df.withColumn(
         "weight", hash_udf(F.col("hashtag")))
 
+    # Iterate the algorithm
+
+    # user nodes, hash nodes, post nodes,
+
+    # udf need to be sum of weights not just ...
+
+    send_user = hash_user
+    send_post = likes_df
+    send_friends = friends_df
+
+    new_hash_user = concatenated_df.join(
+        send_user,
+        concatenated_df["other"] == send_user["follower_id"]
+    ).withColumn(
+        "new_weight",
+        col("concatenate_df.weight") * col("send_users.weight"))
+
+    new_hash_post = concatenated_df.join(
+        send_post,
+        concatenated_df["other"] == send_user["follower_id"]
+    ).withColumn(
+        "new_weight",
+        col("concatenate_df.weight") * col("send_users.weight"))
+
+    # Return something at end with just rows of userid, post, and weight
+    # Then just put that into feed database
+    # Draw that from feed route - where user_id = user_id
+    # order by weight
+    # union on the posts of zero weight
+    # order by weight
+
 
 # Split out hashtag into its components
 # Add edges in the other direction

@@ -32,7 +32,7 @@ async function embed_posts_database() {
         embeddingFunction: embedder
     })
      for (const post of posts) {
-      console.log("Title:" + post.title + " Caption:" + post.captions)
+      console.log("Title:" + post.title + " Caption:" + post.captions + " ")
       const res = await postCollection.add({
         ids: post.post_id.toString(),
         documents: "Title:" + post.title + " Caption:" + post.captions 

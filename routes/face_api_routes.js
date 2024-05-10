@@ -100,6 +100,8 @@ var getActors = async function(req, res) {
 
         await initializeFaceModels();
         console.info("Face models initialized.");
+        console.info("HI?");
+
 
         const collection = await client.getOrCreateCollection({
             name: "face-api",
@@ -107,7 +109,9 @@ var getActors = async function(req, res) {
             metadata: { "hnsw:space": "l2" } // L2 space (squared L2 distance)
         });
 
-        console.log(collection)
+        //console.log(collection)
+        var count = await collection.count();
+        console.log("I have this much data:" + count)
 
         console.info("Collection ready for search.");
         const search = '/nets2120/project-pets-com/uploads/profile.jpg';
