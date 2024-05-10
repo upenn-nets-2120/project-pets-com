@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from graphframes import GraphFrame
 from pyspark.sql.functions import count, col, lit, when
+from pyspark.sql import functions as F
 
 import os
 
@@ -95,6 +96,40 @@ def main():
         hash_dict[row["hashtag"]] = row["count"]
     print(hash_dict)
 
+    # broadcast dictionaries:
+    b_user_hash_dict = spark.sparkContext.broadcast(user_hash_dict)
+    b_user_post_dict = spark.sparkContext.broadcast(user_post_dict)
+    b_user_user_dict = spark.sparkContext.broadcast(user_user_dict)
+    b_hash_dict = spark.sparkContext.broadcast(hash_dict)
+
+    # Making udfs:
+
+    def user_hash_weights(follower_id):
+        return 1/b_user_hash_dict.get(follower_id, 10000)
+
+    def user_post_weights(liker_id):
+        return 1/b_user_post_dict.get(liker_id, 10000)
+
+    def user_user_weights(follower):
+        return 1/b_user_user_dict.get(follower, 10000)
+
+    def hash_weights(hashtag):
+        return 1/b_hash_dict.get(hashtag, 10000)
+
+    user_hash_udf = F.udf(user_hash_weights)
+    user_post_udf = F.udf(user_post_weights)
+    user_user_udf = F.udf(user_user_weights)
+    hash_udf = F.udf(hash_weights)
+
+    # Add weights:
+    hash_user = hash_user.withColumn(
+        "weight", user_hash_udf(F.col("follower_id")))
+    likes_df = likes_df.withColumn("weight", user_post_udf(F.col("liker_id")))
+    friends_df = friends_df.withColumn(
+        "weight", user_user_udf(F.col("follower")))
+    concatenated_df = concatenated_df.withColumn(
+        "weight", hash_udf(F.col("hashtag")))
+
 
 # Split out hashtag into its components
 # Add edges in the other direction
@@ -103,8 +138,6 @@ def main():
 # Series of joins to calculate new weights
 # Done 15 times
 # Upload to SQL
-
-    print(posts_df)
 
     # GraphFrames and PageRank
     # --------
