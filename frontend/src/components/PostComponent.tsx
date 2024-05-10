@@ -13,6 +13,7 @@ export default function PostComponent({
   numlikes = 0,
   comments = [],
   liked = false,
+  dark = false,
 }: {
   title: string;
   user: string | undefined;
@@ -24,10 +25,14 @@ export default function PostComponent({
   liked: boolean;
   comments: string[] | undefined;
   commentUsers: string[] | undefined;
+  dark: boolean;
 }) {
   const rootURL = config.serverRootURL;
   const [like, setLike] = useState(liked);
   const [com, setCom] = useState("");
+  const light = ["bg-white", "bg-slate-50"];
+  const dark2 = ["bg-black", "bg-gray-700"];
+  const text = ["text-white", "text-black"];
 
   const changeLike = async () => {
     try {
@@ -60,22 +65,30 @@ export default function PostComponent({
   };
 
   return (
-    <div className="rounded-md bg-slate-50 w-full max-w-[1000px] space-y-2 p-3">
-      <div className=" text-slate-800">
+    <div
+      className={`rounded-md w-full max-w-[1000px] space-y-2 p-3 ${
+        dark ? dark2[1] : light[1]
+      }`}
+    >
+      <div className={`${dark ? text[0] : text[1]}`}>
         <span className="font-semibold"> @{user} </span>
         posted
       </div>
       {title && title != "null" && (
-        <div className="text-2xl font-bold">{title}</div>
+        <div className={`text-2xl font-bold $${dark ? text[0] : text[1]}`}>
+          {title}
+        </div>
       )}
       {image && <img src={image} style={{ width: "300px", height: "200px" }} />}
-      <div className="">{description}</div>
+      <div className={`${dark ? text[0] : text[1]}`}>{description}</div>
       <FavoriteBorderIcon
-        className={`${like ? "text-red-500" : "text-black"} cursor-pointer`}
+        className={`${
+          like ? "text-red-500" : dark ? text[0] : text[1]
+        } cursor-pointer`}
         onClick={() => changeLike()}
       />{" "}
       {numlikes ? <span> {numlikes}</span> : <span>0</span>}
-      <div> Comments: </div>
+      <div className={`${dark ? text[0] : text[1]}`}> Comments: </div>
       {comments?.map((inp) => (
         <div> {inp[1] + ":  " + inp[0]} </div>
       ))}

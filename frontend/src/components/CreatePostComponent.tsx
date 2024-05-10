@@ -4,13 +4,16 @@ import config from "../../config.json";
 import { useParams } from "react-router-dom";
 axios.defaults.withCredentials = true;
 
-function CreatePostComponent({ updatePosts }) {
+function CreatePostComponent({ updatePosts, dark }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const { username } = useParams();
   const [file, setFile] = useState(null);
   const [fileURL, setFileURL] = useState("");
 
+  const light = ["bg-white", "bg-slate-50"];
+  const dark2 = ["bg-black", "bg-gray-700"];
+  const text = ["text-white", "text-black"];
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -24,19 +27,19 @@ function CreatePostComponent({ updatePosts }) {
     try {
       //console.log(username);
       const formData = new FormData();
-      formData.append('title', title);
-      formData.append('captions', content);
+      formData.append("title", title);
+      formData.append("captions", content);
       if (file) {
-        formData.append('image', file); 
+        formData.append("image", file);
       }
       const response = await axios.post(
         `${config.serverRootURL}/${username}/createPost`,
         formData,
-        { 
+        {
           withCredentials: true,
           headers: {
-            'Content-Type': 'multipart/form-data' 
-          }
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
       console.log(response);
@@ -54,10 +57,18 @@ function CreatePostComponent({ updatePosts }) {
   };
 
   return (
-    <div className="w-screen h-screen flex justify-center">
+    <div className={` flex justify-center ${dark ? text[0] : text[1]}`}>
       <form>
-        <div className="rounded-md bg-slate-50 p-6 space-y-2 w-full">
-          <div className="font-bold flex w-full justify-center text-2xl mb-4">
+        <div
+          className={`rounded-md ${
+            dark ? dark2[1] : light[1]
+          } p-6 space-y-2 w-full`}
+        >
+          <div
+            className={`font-bold flex w-full justify-center text-2xl mb-4 ${
+              dark ? text[0] : text[1]
+            }`}
+          >
             Create Post
           </div>
           <div className="flex space-x-4 items-center justify-between">

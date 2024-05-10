@@ -56,6 +56,7 @@ const cPost = async(id, title, captions) => {
         //NEED Post ID
         const postIDQuery = `SELECT post_id FROM posts WHERE author_id = '${id}' ${title ? ` AND title = '${title}'` : ''} ${captions ? `AND captions = '${captions}'` : ""};`;
         const result = await db.send_sql(postIDQuery);
+        if(result.length > 0){
         const post_id = result[0].post_id; 
         matches?.map(async match => {
             const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post_id}, ${id}) `
@@ -64,6 +65,7 @@ const cPost = async(id, title, captions) => {
              })
         console.log("INSERTED ")
         console.log(insertPostQuery)
+            }
     } catch(error) {
         console.log(error);
     }
