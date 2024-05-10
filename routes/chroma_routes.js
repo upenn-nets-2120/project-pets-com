@@ -12,7 +12,11 @@ const {
   } = require("@langchain/core/runnables");
 const { formatDocumentsAsString } = require("langchain/util/document");
 const { StringOutputParser } = require("@langchain/core/output_parsers");
-
+const { createStuffDocumentsChain } = require("langchain/chains/combine_documents");
+const { MemoryVectorStore } = require("langchain/vectorstores/memory");
+const { ChromaClient } = require('chromadb')
+const process = require('process');
+const {OpenAIEmbeddingFunction} = require('chromadb');
 
 
 const db = dbsingleton;
@@ -25,7 +29,6 @@ var getVectorStore = async function(req) {
             url: "http://localhost:8000", // Optional, will default to this value
             });
     }
-    console.log(vectorStore)
     return vectorStore;
 }
 
@@ -48,13 +51,16 @@ var search = async function(req, res) {
 
     const vs = await getVectorStore();
     const retriever = vs.asRetriever();
-
     const context = req.body.context;
 
-    const prompt = PromptTemplate.fromTemplate(` 
-        Answer the question ${question} given the following context: ${context}. Always respond with a title and the caption.
-    `);
+    const response = await vs.similaritySearch(question);
+    const contextI = formatDocumentsAsString(response)
 
+    const prompt = PromptTemplate.fromTemplate(` 
+        ${question} given the context ${context}. The titles and captions you have access to are posts from the Pennstagram database. Always respond with a post, giving its title and caption. You have the 
+        following titles and captions: ${contextI}. If its not an exact match, just say this is a similar result.
+    `);
+    
     const llm = new ChatOpenAI({
         model: 'gpt-3.5-turbo',
         temperature: 0,
@@ -70,10 +76,13 @@ var search = async function(req, res) {
       new StringOutputParser(),
     ]);
 
-    result = await ragChain.invoke(req.body.question);
+    const result = await ragChain.invoke(req.body.question);
+
+
     console.log(result);
+    console.log(response);
     res.status(200).json({message: result});
-}
+ }
 
 var chromaRoutes = {
     search,
