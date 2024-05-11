@@ -47,7 +47,7 @@ var search = async function(req, res) {
     //     return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
     // }
 
-    //cd.embed_posts_database();
+    cd.embed_posts_database();
 
     const vs = await getVectorStore();
     const retriever = vs.asRetriever();

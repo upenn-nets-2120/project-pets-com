@@ -96,17 +96,18 @@ var getActors = async function(req, res) {
             }
         });
 
-        const client = new ChromaClient();
+        const client = new ChromaClient({
+            path: 'http://localhost:8000'
+          });
 
         await initializeFaceModels();
         console.info("Face models initialized.");
-        console.info("HI?");
-
 
         const collection = await client.getOrCreateCollection({
             name: "face-api",
             embeddingFunction: null, // Ensure this is intended to be null
-            metadata: { "hnsw:space": "l2" } // L2 space (squared L2 distance)
+            metadata: { "hnsw:space": "l2" }, // L2 space (squared L2 distance)
+            url: "http://localhost:8000",
         });
 
         //console.log(collection)
