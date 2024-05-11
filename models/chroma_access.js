@@ -27,15 +27,24 @@ async function embed_posts_database() {
        path: 'http://localhost:8000'
      });
       const posts = await sql.get_posts();  
+      const users = await sql.get_users(); 
       const postCollection = await client.getOrCreateCollection({
-        name: "posts-2", 
+        name: "posts-actors", 
         embeddingFunction: embedder
     })
      for (const post of posts) {
-      console.log("Title:" + post.title + " Caption:" + post.captions + " By:" + post.username)
+      console.log("Title:" + post.title + " Caption:" + post.captions + "By:" + post.username)
       const res = await postCollection.add({
         ids: post.post_id.toString(),
         documents: "Title:" + post.title + " Caption:" + post.captions + " By:" + post.username
+      });
+      console.log(res)
+    }  
+     for (const user of users) {
+      console.log("Username:" + user.username + " First Name:" + user.firstName + " Last Name:" + user.lastName + " Affiliation:" + user.affiliation )
+      const res = await postCollection.add({
+        ids: user.user_id.toString() + "u",
+        documents: "Username:" + user.username + " First Name:" + user.firstName + " Last Name:" + user.lastName + " Affiliation:" + user.affiliation 
       });
       console.log(res)
     }  
@@ -44,19 +53,37 @@ async function embed_posts_database() {
   }
 }
 
-async function embed_post(title, captions, id) {
+async function embed_post(title, captions, author, id) {
   try {
      const client = new ChromaClient({
        path: 'http://localhost:8000'
      });
       const postCollection = await client.getOrCreateCollection({
-        name: "posts-2", 
+        name: "posts-actors", 
         embeddingFunction: embedder
     })
       await postCollection.add({
-        embeddings: embedder,
-        documents: "Title:" + title + " Caption:" + captions,
         ids: id.toString(),
+        documents: "Title:" + title + " Caption:" + captions + " By:" + author
+  });
+      console.log("Successful!") 
+  } catch (error) {
+      console.error('Error embedding posts:', error);
+  }
+}
+
+async function embed_user(username, firstName, lastName, affiliation, id) {
+  try {
+     const client = new ChromaClient({
+       path: 'http://localhost:8000'
+     });
+      const postCollection = await client.getOrCreateCollection({
+        name: "posts-actors", 
+        embeddingFunction: embedder
+    })
+      await postCollection.add({
+        ids: id.toString() + "u",
+        documents: "Username:" + username + " First Name:" + firstName + " Last Name:" + lastName + " Affiliation:" + affiliation 
       });
       console.log("Successful!") 
   } catch (error) {
@@ -67,13 +94,14 @@ async function embed_post(title, captions, id) {
 module.exports = {
     get_connection,
     embed_posts_database,
-    embed_post
+    embed_post,
+    embed_user
 }
 
 async function get_connection() {
     // Create vector store and index the docs
     const vectorStore = await Chroma.fromExistingCollection(new OpenAIEmbeddings(), {
-    collectionName: "posts-2",
+    collectionName: "posts-actors",
     url: "http://localhost:8000", // Optional, will default to this value
     });
 
@@ -104,7 +132,7 @@ async function get_collection() {
 
 //   const collection = client.collection('imdb_reviews');
   let collection = await client.getCollection({
-    name: "posts-2",
+    name: "posts-actors",
     embeddingFunction: emb_fn,
   });
   console.log(collection);

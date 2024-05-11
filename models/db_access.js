@@ -15,7 +15,8 @@ module.exports = {
     insert_items,
     send_sql,
     close_db,
-    get_posts
+    get_posts,
+    get_users
 }
 
 /**
@@ -64,6 +65,10 @@ async function get_db_connection() {
 
 async function get_posts() {
     return send_sql("SELECT posts.captions, posts.title, posts.post_id, users.username FROM posts JOIN users ON posts.author_id = users.user_id;");
+}
+
+async function get_users() {
+    return send_sql("SELECT users.user_id, users.username, users.affiliation, users.firstName, users.lastName FROM users;");
 }
   
 

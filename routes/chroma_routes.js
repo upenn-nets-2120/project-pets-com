@@ -17,6 +17,7 @@ const { MemoryVectorStore } = require("langchain/vectorstores/memory");
 const { ChromaClient } = require('chromadb')
 const process = require('process');
 const {OpenAIEmbeddingFunction} = require('chromadb');
+const { CollectionsBookmarkRounded } = require("@mui/icons-material");
 
 
 const db = dbsingleton;
@@ -25,7 +26,7 @@ var vectorStore = null;
 var getVectorStore = async function(req) {
     if (vectorStore == null) {
         vectorStore = await Chroma.fromExistingCollection(new OpenAIEmbeddings(), {
-            collectionName: "posts-2",
+            collectionName: "posts-actors",
             url: "http://localhost:8000", // Optional, will default to this value
             });
     }
@@ -35,13 +36,13 @@ var getVectorStore = async function(req) {
 //GET /:username/search?=query
 var search = async function(req, res) {
 
-    // let username = req.params.username;
-    // if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
-    //     return res.status(403).json( {error: 'Not logged in.'} );
-    // }
-    // if (!req.body || !req.body.question) {
-    //     return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
-    // }
+    let username = req.params.username;
+    if (username == null || !helper.isOK(username) || !helper.isLoggedIn(req, username)) {
+        return res.status(403).json( {error: 'Not logged in.'} );
+    }
+    if (!req.body || !req.body.question) {
+        return res.status(400).json({error: 'One or more of the fields you entered was empty, please try again.'});
+    }
     const question = req.body.question;
     // if (!helper.isOK(question)) {
     //     return res.status(400).json({error: 'Potential injection attack detected: please do not use forbidden characters.'});
@@ -54,13 +55,16 @@ var search = async function(req, res) {
     const context = req.body.context;
     console.log(context,question)
     const response = await vs.similaritySearch(question);
-    console.log(response)
-    const contextI = formatDocumentsAsString(response)
+    const contextI = formatDocumentsAsString(response);
+    console.log(contextI);
 
     const prompt = PromptTemplate.fromTemplate(` 
-        ${contextI}. The titles and captions you have access to are posts from the Pennstagram database. Always respond with a post, giving its title and caption. You have the 
-        following titles and captions: ${response}. If its not an exact match, just say this is a similar result.
+        This is a question: ${question}. You have access to a) user information and b) post information about social media site Pennstagram. Pennstagram is a real social media site and you are a friendly helper chat bot.
+        Interact with the user while always including in your answers either the title, caption and author of a post. Or, the username, affiliation, first name, and last name of a user. You cannot return both, you must pick the most relevant one. 
+        You have the info: ${contextI}.
     `);
+
+    console.log(prompt);
     
     const llm = new ChatOpenAI({
         model: 'gpt-3.5-turbo',

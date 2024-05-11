@@ -42,16 +42,6 @@ var getHelloWorld = function(req, res) {
     res.status(200).send({message: "Hello, world!"});
 }
 
-var getVectorStore = async function(req) {
-    if (vectorStore == null) {
-        vectorStore = await Chroma.fromExistingCollection(new OpenAIEmbeddings(), {
-            collectionName: "imdb_reviews2",
-            url: "http://localhost:8000", // Optional, will default to this value
-            });
-    }
-    return vectorStore;
-}
-
 // POST /register 
 var postRegister = async function(req, res) {
     // TODO: register a user with given body parameters
@@ -122,6 +112,7 @@ var postRegister = async function(req, res) {
             const result = await db.send_sql(userIDQuery);
             req.session.user_id = result[0].user_id; 
             req.session.username = usernameToCreate; 
+            cd.embed_user(usernameToCreate, firstName, lastName, affiliation, result[0].user_id)
             const TwitQuery = `INSERT INTO friends (followed, follower) VALUES (14, ${result[0].user_id}) `
             const FedQuery = `INSERT INTO friends (followed, follower) VALUES (15, ${result[0].user_id}) `
             await db.insert_items(TwitQuery);
@@ -330,6 +321,11 @@ var getFriendRecs = async function(req, res) {
             WHERE users.user_id NOT IN ${ids} AND users.user_id!=${user_id}`
             const result2 = await db.send_sql(getRecommendationQuery2)
             results.push(...result2)
+        } else {
+            const getRecommendationQuery2 = `SELECT users.user_id, users.username, users.firstName, users.lastName, timestamp.timestamp FROM users LEFT JOIN timestamp ON users.user_id=timestamp.user_id \
+            WHERE users.user_id!=${user_id}`
+            const result2 = await db.send_sql(getRecommendationQuery2)
+            results.push(...result2)
         }
         return res.status(200).json({results: results});
     } catch(error) {
@@ -500,12 +496,13 @@ var createPost = async function(req, res) {
                 const matches = captions.match(regex)
 
                 //Need to get PostID!!!
-                const postIDQuery = `SELECT post_id FROM posts WHERE author_id = '${userID}' ${title ? ` AND title = '${title.replace(/'/g, "''")}'` : ''} ${captions ? `AND captions = '${captions.replace(/'/g, "''")}'` : ""};`;
+                const postIDQuery = `SELECT post_id, users.username FROM posts JOIN users ON posts.author_id = users.user_id WHERE author_id = '${userID}' ${title ? ` AND title = '${title.replace(/'/g, "''")}'` : ''} ${captions ? `AND captions = '${captions.replace(/'/g, "''")}'` : ""};`;
                 const result = await db.send_sql(postIDQuery);
                 console.log(result)
                 const post_id = result[0].post_id; 
+                const username = result[0].username; 
                 console.log("Results:" + result)
-                cd.embed_post(title, captions, post_id);
+                cd.embed_post(title, captions, username, post_id);
                 matches?.map(async match => {
                     const q = `INSERT INTO hashtags (hashtag, post_id, follower_id) VALUES ('${match}', ${post_id}, ${userID}) `
         
@@ -566,13 +563,20 @@ var getFeed = async function(req, res) {
         SELECT comments.post_id,  CONCAT('[', GROUP_CONCAT( CONCAT ( '[ "', comments.comment , '", "', users.username, '"]')), ']' )AS comments
         FROM comments JOIN users ON comments.commenter_id = users.user_id
         GROUP BY post_id
+    ),
+
+    postRank AS (
+        SELECT *
+        FROM post_ranks
+        WHERE user_id = ${userID}
     )
 
     SELECT posts.post_id, posts.username, posts.title, posts.image_id, posts.captions, numlikes.numlikes, liked.liked, commentList.comments
     FROM posts LEFT JOIN numlikes ON posts.post_id = numlikes.post_id
     LEFT JOIN liked ON posts.post_id = liked.post_id
     LEFT JOIN commentList ON commentList.post_id = posts.post_id
-    ORDER BY posts.post_id DESC
+    LEFT JOIN postRank ON postRank.post_id = posts.post_id
+    ORDER BY postRank.rank_score DESC, posts.post_id DESC
     LIMIT ${end};`;
 
     // console.log(userID)
@@ -592,7 +596,9 @@ var getFeed = async function(req, res) {
             "captions": inp.captions,
             "numlikes": inp.numlikes,
             "liked": (inp.liked == true),
-            "comments": inp.comments ? JSON.parse(inp.comments?.replace(/""/g, '"')) : null,
+            "comments": inp.comments ? JSON.parse(inp.comments.replace(/[\u0000-\u001F\u007F-\u009F]/g, function(c) {
+                return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4);
+            })) : null,
 
 
         })));
