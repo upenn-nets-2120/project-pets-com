@@ -318,7 +318,7 @@ var getFriendRecs = async function(req, res) {
         console.log(ids)
         if (ids != '()') {
             const getRecommendationQuery2 = `SELECT users.user_id, users.username, users.firstName, users.lastName, timestamp.timestamp FROM users LEFT JOIN timestamp ON users.user_id=timestamp.user_id \
-            WHERE users.user_id NOT IN ${ids} AND users.user_id!=${user_id}`
+            WHERE users.user_id NOT IN ${ids} AND users.user_id NOT IN (SELECT friends.followed FROM friends WHERE follower = ${user_id}) AND users.user_id!=${user_id}`
             const result2 = await db.send_sql(getRecommendationQuery2)
             results.push(...result2)
         } else {
@@ -560,7 +560,7 @@ var getFeed = async function(req, res) {
         WHERE liker_id = ${userID}
     ),
     commentList AS (
-        SELECT comments.post_id,  CONCAT('[', GROUP_CONCAT( CONCAT ( '[ "', comments.comment , '", "', users.username, '"]')), ']' )AS comments
+        SELECT comments.post_id,  CONCAT('[', GROUP_CONCAT( CONCAT ( '[ "', REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(comments.comment, ']', ''), '[', ''), ',', ''), '{', ''), '}', '')  , '", "', users.username, '"]')), ']' )AS comments
         FROM comments JOIN users ON comments.commenter_id = users.user_id
         GROUP BY post_id
     ),
@@ -596,7 +596,7 @@ var getFeed = async function(req, res) {
             "captions": inp.captions,
             "numlikes": inp.numlikes,
             "liked": (inp.liked == true),
-            "comments": inp.comments ? JSON.parse(inp.comments.replace(/[\u0000-\u001F\u007F-\u009F]/g, function(c) {
+            "comments": inp.comments ? JSON.parse(inp.comments.replace(/""/g, '"').replace(/[\u0000-\u001F\u007F-\u009F]/g, function(c) {
                 return '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4);
             })) : null,
 
