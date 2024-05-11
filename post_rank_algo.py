@@ -148,142 +148,40 @@ def main():
         "weight", hash_udf(F.col("hashtag")))
     c_df_post = c_df_post.withColumn(
         "weight", hash_udf(F.col("hashtag")))
-    c_df_user.show()
-    c_df_post.show()
 
-    vertices = users_df.select(col("user_id").alias("id"), lit("user").alias("type")).unionByName(
-            posts_df.select(col("post_id").alias("id"), lit("post").alias("type"))
-        )
-    vertices = hash_user.select(col("follower_id").alias("id"), lit("user").alias("type"), lit(1).alias("value")).unionByName(
-        likes_df.select(col("liker_id").alias("id"),lit("user").alias("type"), lit(1).alias("value")).unionByName(
-            friends_df.select(col("follower").alias("id"),lit("user").alias("type"), lit(1).alias("value")).unionByName(
-                friends_df.select(col("followed").alias("id"),lit("user").alias("type"), lit(1).alias("value")).unionByName(
-                    likes_df.select(col("post_id").alias("id"),lit("post").alias("type"), lit(0).alias('value')).unionByName(
-                        c_df_user.select(col("hashtag").alias("id"),lit("hashtag").alias("type"), lit(0).alias('value')).unionByName(
-                            hash_user.select(col("hashtag").alias("id"), lit("hashtag").alias("type"), lit(0).alias('value')).unionByName(
-                                c_df_user.select(col("other").alias("id"),lit("user").alias("type"), lit(1).alias('value')).unionByName(
-                                    c_df_post.select(col("hashtag").alias("id"),lit("hashtag").alias("type"), lit(0).alias('value')).unionByName(
-                                        c_df_post.select(col("other").alias("id"),lit("post").alias("type"), lit(0).alias('value'))
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    )
-    edges = hash_user.select(
-        col("follower_id").alias("src"),col("hashtag").alias("dst"),col("weight")
-    ).unionByName(
-        hash_user.select(
-            col("hashtag").alias("src"),col("follower_id").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        likes_df.select(
-            col("post_id").alias("src"),col("liker_id").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        likes_df.select(
-            col("liker_id").alias("src"),col("post_id").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        friends_df.select(
-            col("followed").alias("src"),col("follower").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        friends_df.select(
-            col("follower").alias("src"),col("followed").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        c_df_user.select(
-            col("other").alias("src"),col("hashtag").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        c_df_user.select(
-            col("other").alias("dst"),col("hashtag").alias("src"),col("weight")
-        )
-    ).unionByName(
-        c_df_post.select(
-            col("other").alias("src"),col("hashtag").alias("dst"),col("weight")
-        )
-    ).unionByName(
-        c_df_post.select(
-            col("other").alias("dst"),col("hashtag").alias("src"),col("weight")
-        )
-    )
+    # Iterate the algorithm
 
-    vertices.where(vertices.type=='post').show(200,False)
-    edges.show(200,False)
+    # user nodes, hash nodes, post nodes,
 
-    def normalize_weights(edges, relationship_type, total_weight):
-        """
-        Normalize weights for edges based on the specified relationship type and total weight allowed.
-        """
-        # Filter and calculate new weights
-        filtered_edges = edges.filter(col("relationship") == relationship_type)
-        total_weights = filtered_edges.groupBy("src").agg(_sum("weight").alias("total_weight"))
-        normalized_edges = filtered_edges.join(total_weights, "src").select(
-            col("src"), 
-            col("dst"), 
-            (col("weight") / col("total_weight") * total_weight).alias("weight"),
-            col("relationship")
-        )
-        return normalized_edges
+    # udf need to be sum of weights not just ...
 
-    def update_vertex_weights(vertices, edges):
-        """
-        Update vertex weights based on the normalized edge weights.
-        """
-        new_weights = edges.join(vertices, edges.src == vertices.id) \
-                        .select(col("dst"), (col("weight") * col("vertices.weight")).alias("contributed_weight")) \
-                        .groupBy("dst").agg(_sum("contributed_weight").alias("new_weight"))
-        
-        total_weight = new_weights.select(_sum("new_weight")).first()[0]
-        normalized_vertices = new_weights.select(col("dst").alias("id"), (col("new_weight") / total_weight).alias("weight"))
-        return normalized_vertices
+    send_user = hash_user
+    send_post = likes_df
+    send_friends = friends_df
 
-    def run_adsorption(graph, max_iterations=15, convergence_threshold=0.01):
-        """
-        Run the adsorption algorithm with convergence checking.
-        """
-        vertices = graph.vertices.withColumnRenamed("weight", "prev_weight")
-        for i in range(max_iterations):
-            # Normalize weights for each relationship type
-            u_h_edges = normalize_weights(graph.edges, 'interest', 0.3)
-            u_p_edges = normalize_weights(graph.edges, 'like', 0.4)
-            u_u_edges = normalize_weights(graph.edges, 'friend', 0.3)
+    new_hash_user = concatenated_df.join(
+        send_user,
+        concatenated_df["other"] == send_user["follower_id"]
+    ).withColumn(
+        "new_weight",
+        col("concatenate_df.weight") * col("send_users.weight"))
 
-            # Combine all edges back into the graph
-            all_edges = u_h_edges.union(u_p_edges).union(u_u_edges)
-            graph = GraphFrame(vertices, all_edges)
+    new_hash_post = concatenated_df.join(
+        send_post,
+        concatenated_df["other"] == send_user["follower_id"]
+    ).withColumn(
+        "new_weight",
+        col("concatenate_df.weight") * col("send_users.weight"))
 
-            # Update vertex weights
-            updated_vertices = update_vertex_weights(vertices, all_edges)
-            joined_vertices = updated_vertices.join(vertices, "id").select(
-                updated_vertices["*"], 
-                abs(updated_vertices["weight"] - vertices["prev_weight"]).alias("weight_diff")
-            )
-
-            # Check for convergence
-            max_diff = joined_vertices.select(_max("weight_diff")).first()[0]
-            if max_diff < convergence_threshold:
-                print(f"Convergence reached after {i+1} iterations.")
-                return joined_vertices.drop("weight_diff")
-
-            # Prepare for the next iteration
-            vertices = joined_vertices.drop("weight_diff").withColumnRenamed("weight", "prev_weight")
-
-        return vertices.drop("prev_weight")
-
-    final_vertices = run_adsorption(graph)
-    final_vertices.show()
+    # Return something at end with just rows of userid, post, and weight
+    # Then just put that into feed database
+    # Draw that from feed route - where user_id = user_id
+    # order by weight
+    # union on the posts of zero weight
+    # order by weight
 
 
-
-
-# Split out hash
-# tag into its components
+# Split out hashtag into its components
 # Add edges in the other direction
 # Group by key to get weights for each node
 # Normalize weights
@@ -325,3 +223,4 @@ ranked_posts.write.format("jdbc") \
 main()
 
 
+ 

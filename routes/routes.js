@@ -571,7 +571,7 @@ var getFeed = async function(req, res) {
     SELECT posts.post_id, posts.username, posts.title, posts.image_id, posts.captions, numlikes.numlikes, liked.liked, commentList.comments
     FROM posts LEFT JOIN numlikes ON posts.post_id = numlikes.post_id
     LEFT JOIN liked ON posts.post_id = liked.post_id
-    LEFT JOIN commentList ON commentList.post_id = liked.post_id
+    LEFT JOIN commentList ON commentList.post_id = posts.post_id
     ORDER BY posts.post_id DESC
     LIMIT ${end};`;
 

@@ -96,7 +96,9 @@ var getActors = async function(req, res) {
             }
         });
 
-        const client = new ChromaClient();
+        const client = new ChromaClient({
+            path: 'http://localhost:8000'
+          });
 
         await initializeFaceModels();
         console.info("Face models initialized.");
@@ -104,10 +106,13 @@ var getActors = async function(req, res) {
         const collection = await client.getOrCreateCollection({
             name: "face-api",
             embeddingFunction: null, // Ensure this is intended to be null
-            metadata: { "hnsw:space": "l2" } // L2 space (squared L2 distance)
+            metadata: { "hnsw:space": "l2" }, // L2 space (squared L2 distance)
+            url: "http://localhost:8000",
         });
 
-        console.log(collection)
+        //console.log(collection)
+        var count = await collection.count();
+        console.log("I have this much data:" + count)
 
         console.info("Collection ready for search.");
         const search = '/nets2120/project-pets-com/uploads/profile.jpg';
