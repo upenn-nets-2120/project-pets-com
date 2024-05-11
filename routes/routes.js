@@ -302,11 +302,11 @@ var getFriendRecs = async function(req, res) {
 
     const getRecommendationsDebugQuery2 = `WITH following AS (SELECT followed
         FROM friends 
-        WHERE follower = 13) 
+        WHERE follower = 12) 
         
         SELECT users.user_id, users.username, users.firstName, users.lastName, timestamp.timestamp FROM users LEFT JOIN timestamp ON users.user_id=timestamp.user_id JOIN 
         friends ON friends.followed=users.user_id JOIN following ON following.followed = friends.follower
-         WHERE friends.followed NOT IN (SELECT followed FROM following) AND users.user_id != 13
+         WHERE friends.followed NOT IN (SELECT followed FROM following) AND users.user_id != 12
        GROUP BY friends.followed
         ORDER BY COUNT(*) DESC;`
 
@@ -322,6 +322,15 @@ var getFriendRecs = async function(req, res) {
     
     try {
         const results = await db.send_sql(getRecommendationsQuery);
+        const examples = results.map(x=>x.user_id)
+        const ids = `(${examples.join(',')})`;
+        console.log(ids)
+        if (ids != '()') {
+            const getRecommendationQuery2 = `SELECT users.user_id, users.username, users.firstName, users.lastName, timestamp.timestamp FROM users LEFT JOIN timestamp ON users.user_id=timestamp.user_id \
+            WHERE users.user_id NOT IN ${ids} AND users.user_id!=${user_id}`
+            const result2 = await db.send_sql(getRecommendationQuery2)
+            results.push(...result2)
+        }
         return res.status(200).json({results: results});
     } catch(error) {
         console.log(error)

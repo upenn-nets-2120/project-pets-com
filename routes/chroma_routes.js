@@ -52,13 +52,14 @@ var search = async function(req, res) {
     const vs = await getVectorStore();
     const retriever = vs.asRetriever();
     const context = req.body.context;
-
+    console.log(context,question)
     const response = await vs.similaritySearch(question);
+    console.log(response)
     const contextI = formatDocumentsAsString(response)
 
     const prompt = PromptTemplate.fromTemplate(` 
-        ${question} given the context ${context}. The titles and captions you have access to are posts from the Pennstagram database. Always respond with a post, giving its title and caption. You have the 
-        following titles and captions: ${contextI}. If its not an exact match, just say this is a similar result.
+        ${contextI}. The titles and captions you have access to are posts from the Pennstagram database. Always respond with a post, giving its title and caption. You have the 
+        following titles and captions: ${response}. If its not an exact match, just say this is a similar result.
     `);
     
     const llm = new ChatOpenAI({

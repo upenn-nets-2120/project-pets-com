@@ -19,7 +19,7 @@ app.use(session({
 
 
 registry.register_routes(app);
-kafka.runConsumer().catch(console.error);
+//kafka.runConsumer().catch(console.error);
 
 
 app.listen(port, () => {
